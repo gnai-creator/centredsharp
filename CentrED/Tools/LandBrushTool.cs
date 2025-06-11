@@ -215,8 +215,8 @@ public class LandBrushTool : BaseTool
                     {
                         if (activeBrush.TryGetMinimalTransition(currentTileBrush.Name, reversedTransition, out targetTransition))
                         {
-                            // We have inverse the transition direction to get real result
-                            result = ~targetTransition.Direction;
+                            // Reverse the direction of the found transition so it matches the original request
+                            result = targetTransition.Direction.Reverse();
                         }
                     }
                 }
