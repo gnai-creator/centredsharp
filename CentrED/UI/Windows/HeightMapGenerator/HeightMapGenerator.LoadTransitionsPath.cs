@@ -23,7 +23,7 @@ public partial class HeightMapGenerator
         {
             if (!File.Exists(path))
                 return;
-            var data = JsonSerializer.Deserialize<Dictionary<string, Tile[]>>(File.ReadAllText(path), new JsonSerializerOptions
+            var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TransitionTile>>>(File.ReadAllText(path), new JsonSerializerOptions
             {
                 IncludeFields = true
             });

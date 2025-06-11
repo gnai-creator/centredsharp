@@ -7,7 +7,7 @@ namespace CentrED.UI.Windows;
 
 public partial class HeightMapGenerator
 {
-    private void DrawTransitions(Dictionary<string, Tile[]> transitions, ref string selected)
+    private void DrawTransitions(Dictionary<string, Dictionary<string, TransitionTile>> transitions, ref string selected)
     {
         if (ImGui.BeginChild("TransitionList", new Vector2(0, 120), ImGuiChildFlags.Borders))
         {
@@ -20,52 +20,50 @@ public partial class HeightMapGenerator
             ImGui.EndChild();
         }
 
-        if (!string.IsNullOrEmpty(selected) && transitions.TryGetValue(selected, out var tiles))
+        if (!string.IsNullOrEmpty(selected) && transitions.TryGetValue(selected, out var dict))
         {
             if (ImGui.BeginChild($"{selected}_tiles", new Vector2(0, 120), ImGuiChildFlags.Borders))
             {
-                for (int row = 0; row < 3; row++)
+                foreach (var kv in dict.ToArray())
                 {
-                    for (int col = 0; col < 3; col++)
+                    var pattern = kv.Key;
+                    var tile = kv.Value;
+                    ImGui.PushID(pattern);
+                    ImGui.Text(pattern);
+                    ImGui.SameLine();
+                    string label = tile.Id != 0 ? $"0x{tile.Id:X4}" : "---";
+                    if (tile.Id != 0)
                     {
-                        int idx = row * 3 + col;
-                        var tile = tiles[idx];
-                        string label = tile.Id != 0 ? $"0x{tile.Id:X4}" : "---";
-                        ImGui.PushID(idx);
-                        if (tile.Id != 0)
+                        var tex = CalculateButtonTexture((ushort)tile.Id);
+                        if (ImGui.ImageButton("tile", tex.texPtr, new Vector2(44, 44), tex.uv0, tex.uv1))
                         {
-                            var tex = CalculateButtonTexture(tile.Id);
-                            if (ImGui.ImageButton("tile", tex.texPtr, new Vector2(44, 44), tex.uv0, tex.uv1))
-                            {
-                                tiles[idx] = new Tile(tile.Type, 0);
-                            }
-                            UIManager.Tooltip(label);
+                            tile.Id = 0;
+                            dict[pattern] = tile;
                         }
-                        else
-                        {
-                            if (ImGui.Button("---", new Vector2(44, 44)))
-                            {
-                                // already empty, nothing to do
-                            }
-                        }
-                        if (ImGui.BeginDragDropTarget())
-                        {
-                            var payloadPtr = ImGui.AcceptDragDropPayload(TilesWindow.Land_DragDrop_Target_Type);
-                            unsafe
-                            {
-                                if (payloadPtr.NativePtr != null)
-                                {
-                                    var dataPtr = (int*)payloadPtr.Data;
-                                    ushort id = (ushort)dataPtr[0];
-                                    tiles[idx] = new Tile(tile.Type, id);
-                                }
-                            }
-                            ImGui.EndDragDropTarget();
-                        }
-                        ImGui.PopID();
-                        if (col < 2)
-                            ImGui.SameLine();
+                        UIManager.Tooltip(label);
                     }
+                    else
+                    {
+                        if (ImGui.Button("---", new Vector2(44, 44)))
+                        {
+                        }
+                    }
+                    if (ImGui.BeginDragDropTarget())
+                    {
+                        var payloadPtr = ImGui.AcceptDragDropPayload(TilesWindow.Land_DragDrop_Target_Type);
+                        unsafe
+                        {
+                            if (payloadPtr.NativePtr != null)
+                            {
+                                var dataPtr = (int*)payloadPtr.Data;
+                                ushort id = (ushort)dataPtr[0];
+                                tile.Id = id;
+                                dict[pattern] = tile;
+                            }
+                        }
+                        ImGui.EndDragDropTarget();
+                    }
+                    ImGui.PopID();
                 }
                 ImGui.EndChild();
             }
