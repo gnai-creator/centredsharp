@@ -6,6 +6,7 @@ using System.Numerics;
 using ImGuiNET;
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework.Graphics;
+using CentrED.IO.Models;
 using static CentrED.Application;
 
 namespace CentrED.UI.Windows;
