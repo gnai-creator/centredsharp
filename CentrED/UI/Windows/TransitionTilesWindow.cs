@@ -7,7 +7,6 @@ using ImGuiNET;
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework.Graphics;
 using static CentrED.Application;
-
 namespace CentrED.UI.Windows;
 
 public class TransitionTilesWindow : Window
