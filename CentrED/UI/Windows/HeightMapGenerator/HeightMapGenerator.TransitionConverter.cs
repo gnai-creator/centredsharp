@@ -27,22 +27,28 @@ public partial class HeightMapGenerator
         }
     }
 
+    private class TransitionTile
+    {
+        public int Id;
+        public int MinZ;
+        public int MaxZ;
+    }
+
     private class TransitionConverter
     {
-        private static readonly Dictionary<(int dx, int dy), int> IndexMap = new()
+        private static readonly (int dx, int dy)[] NeighborOffsets = new (int, int)[]
         {
-            {(-1, -1), 0}, // NW
-            {(0, -1), 1},  // N
-            {(1, -1), 2},  // NE
-            {(-1, 0), 3},  // W
-            {(0, 0), 4},   // Center
-            {(1, 0), 5},   // E
-            {(-1, 1), 6},  // SW
-            {(0, 1), 7},   // S
-            {(1, 1), 8}    // SE
+            (-1, -1), // NW
+            (0, -1),  // N
+            (1, -1),  // NE
+            (1, 0),   // E
+            (1, 1),   // SE
+            (0, 1),   // S
+            (-1, 1),  // SW
+            (-1, 0)   // W
         };
 
-        public void ApplyTransitions(Tile[,] map, Dictionary<string, Tile[]> transitionTiles)
+        public void ApplyTransitions(Tile[,] map, Dictionary<string, Dictionary<string, TransitionTile>> transitionTiles)
         {
             int width = map.GetLength(0);
             int height = map.GetLength(1);
@@ -55,18 +61,13 @@ public partial class HeightMapGenerator
                     var center = copy[x, y];
                     var counts = new Dictionary<TerrainType, int>();
 
-                    for (int dy = -1; dy <= 1; dy++)
+                    foreach (var (dx, dy) in NeighborOffsets)
                     {
-                        for (int dx = -1; dx <= 1; dx++)
-                        {
-                            if (dx == 0 && dy == 0)
-                                continue;
-                            var t = copy[x + dx, y + dy];
-                            if (t.Type == center.Type)
-                                continue;
-                            counts.TryGetValue(t.Type, out int c);
-                            counts[t.Type] = c + 1;
-                        }
+                        var t = copy[x + dx, y + dy];
+                        if (t.Type == center.Type)
+                            continue;
+                        counts.TryGetValue(t.Type, out int c);
+                        counts[t.Type] = c + 1;
                     }
 
                     if (counts.Count == 0)
@@ -86,46 +87,19 @@ public partial class HeightMapGenerator
                     if (max == 0)
                         continue;
 
-                    int bestIndex = 4;
-                    int bestCount = 0;
-                    foreach (var kv in IndexMap)
+                    Span<char> patternChars = stackalloc char[8];
+                    int i = 0;
+                    foreach (var (dx, dy) in NeighborOffsets)
                     {
-                        var (dx, dy) = kv.Key;
-                        if (dx == 0 && dy == 0)
-                            continue;
-                        var t = copy[x + dx, y + dy];
-                        if (t.Type == bType)
-                        {
-                            int idx = kv.Value;
-                            int count = 0;
-                            for (int ndy = -1; ndy <= 1; ndy++)
-                            {
-                                for (int ndx = -1; ndx <= 1; ndx++)
-                                {
-                                    if (ndx == 0 && ndy == 0)
-                                        continue;
-                                    int nx = x + dx + ndx;
-                                    int ny = y + dy + ndy;
-                                    if (nx < 0 || nx >= width || ny < 0 || ny >= height)
-                                        continue;
-                                    if (copy[nx, ny].Type == bType)
-                                        count++;
-                                }
-                            }
-                            if (count > bestCount)
-                            {
-                                bestCount = count;
-                                bestIndex = idx;
-                            }
-                        }
+                        patternChars[i++] = copy[x + dx, y + dy].Type == center.Type ? 'A' : 'B';
                     }
+                    string pattern = new(patternChars);
 
                     var key = $"{center.Type.ToString().ToLower()}-{bType.ToString().ToLower()}";
-                    if (transitionTiles.TryGetValue(key, out var tiles) && tiles.Length == 9)
+                    if (transitionTiles.TryGetValue(key, out var dict) && dict.TryGetValue(pattern, out var tileInfo))
                     {
-                        var tile = tiles[bestIndex];
-                        if (tile.Id != 0)
-                            map[x, y] = tile;
+                        if (tileInfo.Id != 0)
+                            map[x, y] = new Tile(center.Type, (ushort)tileInfo.Id);
                     }
                 }
             }

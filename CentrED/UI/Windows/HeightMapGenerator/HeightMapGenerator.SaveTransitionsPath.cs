@@ -24,16 +24,7 @@ public partial class HeightMapGenerator
             WriteIndented = true,
             IncludeFields = true
         };
-        // Serialize a simple representation to avoid accidentally picking up
-        // data from the tile group structure. Each transition entry is
-        // converted to a lightweight array containing only the terrain type
-        // and tile id information used by the generator.
-        var data = transitionTiles.ToDictionary(
-            kv => kv.Key,
-            kv => kv.Value
-                .Select(t => new { Type = t.Type, Id = t.Id })
-                .ToArray());
-        File.WriteAllText(path, JsonSerializer.Serialize(data, options));
+        File.WriteAllText(path, JsonSerializer.Serialize(transitionTiles, options));
         transitionsPath = path;
     }
 }
