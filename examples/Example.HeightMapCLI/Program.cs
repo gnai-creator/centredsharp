@@ -58,7 +58,8 @@ internal class HeightMapGeneratorCLI
     private readonly Dictionary<string, Group> _groups;
     private readonly int _quadrant;
 
-    private const int MapSize = 4096;
+    private const int MapSizeX = 4096;
+    private const int MapSizeY = 4096;
     private const int BlockSize = 256;
     private const int MaxTiles = 16 * 1024 * 1024;
     private static readonly (sbyte Min, sbyte Max)[] HeightRanges =
@@ -99,14 +100,14 @@ internal class HeightMapGeneratorCLI
             return;
         }
 
-        var total = MapSize * MapSize;
+        var total = MapSizeX * MapSizeY;
         if (total > MaxTiles)
             return;
 
         _client.BulkMode = true;
         try
         {
-            GenerateFractalRegion(0, 0, MapSize, MapSize, groupsList, total);
+            GenerateFractalRegion(0, 0, MapSizeX, MapSizeY, groupsList, total);
         }
         finally
         {
@@ -118,70 +119,62 @@ internal class HeightMapGeneratorCLI
 
     private void UpdateHeightData()
     {
-        int quadWidth = _image.Width / 4;
-        int quadHeight = _image.Height / 4;
-        int qx = _quadrant % 4;
-        int qy = _quadrant / 4;
+        int quadWidth = _image.Width / 3;
+        int quadHeight = _image.Height / 3;
+        int qx = _quadrant % 3;
+        int qy = _quadrant / 3;
 
-        _heightData = new sbyte[MapSize, MapSize];
-        int[,] idxMap = new int[MapSize, MapSize];
-        for (int y = 0; y < MapSize; y++)
+        _heightData = new sbyte[MapSizeX, MapSizeY];
+        int[] palette = new int[256];
         {
-            int sy = qy * quadHeight + (int)(y / (float)MapSize * quadHeight);
-            for (int x = 0; x < MapSize; x++)
+            HashSet<int> uniques = new();
+            for (int iy = 0; iy < _image.Height; iy++)
             {
-                int sx = qx * quadWidth + (int)(x / (float)MapSize * quadWidth);
+                for (int ix = 0; ix < _image.Width; ix++)
+                {
+                    var col = _image[ix, iy];
+                    int b = (int)MathF.Round((col.R + col.G + col.B) / 3f);
+                    uniques.Add(Math.Clamp(b, 0, 255));
+                }
+            }
+            var sorted = uniques.OrderBy(v => v).ToArray();
+            if (sorted.Length == NUM_CHANNELS)
+            {
+                int prev = 0;
+                for (int i = 0; i < sorted.Length; i++)
+                {
+                    int next = i < sorted.Length - 1 ? (sorted[i] + sorted[i + 1]) / 2 : 256;
+                    for (int b = prev; b < next; b++)
+                        palette[b] = i;
+                    prev = next;
+                }
+            }
+            else
+            {
+                for (int b = 0; b < 256; b++)
+                    palette[b] = Math.Clamp((int)(b / (256f / NUM_CHANNELS)), 0, NUM_CHANNELS - 1);
+            }
+        }
+
+        int[,] idxMap = new int[MapSizeX, MapSizeY];
+        for (int y = 0; y < MapSizeY; y++)
+        {
+            int sy = qy * quadHeight + (int)(y / (float)MapSizeY * quadHeight);
+            for (int x = 0; x < MapSizeX; x++)
+            {
+                int sx = qx * quadWidth + (int)(x / (float)MapSizeX * quadWidth);
                 var c = _image[sx, sy];
-                int rawIndex = c.R / (256 / NUM_CHANNELS);
-                idxMap[x, y] = Math.Clamp(rawIndex, 0, NUM_CHANNELS - 1);
+                int brightness = (int)MathF.Round((c.R + c.G + c.B) / 3f);
+                idxMap[x, y] = palette[Math.Clamp(brightness, 0, 255)];
             }
         }
 
-        int[,] distMap = new int[MapSize, MapSize];
-        var queue = new Queue<(int X, int Y)>();
-        for (int y = 0; y < MapSize; y++)
+        // ---------------------------
+        // 2. Primeiro passo: gerar altura base sem suavização
+        // ---------------------------
+        for (int y = 0; y < MapSizeY; y++)
         {
-            for (int x = 0; x < MapSize; x++)
-            {
-                if (idxMap[x, y] == 0)
-                {
-                    distMap[x, y] = 0;
-                    queue.Enqueue((x, y));
-                }
-                else
-                {
-                    distMap[x, y] = int.MaxValue;
-                }
-            }
-        }
-
-        while (queue.Count > 0)
-        {
-            var (cx, cy) = queue.Dequeue();
-            int nd = distMap[cx, cy] + 1;
-            if (nd > SMOOTH_RADIUS)
-                continue;
-            for (int dy = -1; dy <= 1; dy++)
-            {
-                int ny = cy + dy;
-                if (ny < 0 || ny >= MapSize) continue;
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    if (dx == 0 && dy == 0) continue;
-                    int nx = cx + dx;
-                    if (nx < 0 || nx >= MapSize) continue;
-                    if (nd < distMap[nx, ny])
-                    {
-                        distMap[nx, ny] = nd;
-                        queue.Enqueue((nx, ny));
-                    }
-                }
-            }
-        }
-
-        for (int y = 0; y < MapSize; y++)
-        {
-            for (int x = 0; x < MapSize; x++)
+            for (int x = 0; x < MapSizeX; x++)
             {
                 int idx = idxMap[x, y];
                 var range = HeightRanges[idx];
@@ -191,12 +184,12 @@ internal class HeightMapGeneratorCLI
                 for (int dy = -1; dy <= 1 && !isEdge; dy++)
                 {
                     int ny = y + dy;
-                    if (ny < 0 || ny >= MapSize) continue;
+                    if (ny < 0 || ny >= MapSizeY) continue;
                     for (int dx = -1; dx <= 1; dx++)
                     {
                         if (dx == 0 && dy == 0) continue;
                         int nx = x + dx;
-                        if (nx < 0 || nx >= MapSize) continue;
+                        if (nx < 0 || nx >= MapSizeX) continue;
                         if (idxMap[nx, ny] != idx)
                         {
                             isEdge = true;
@@ -207,7 +200,7 @@ internal class HeightMapGeneratorCLI
 
                 if (idx == 0)
                 {
-                    z = -127; // água plana e constante
+                    z = -127;
                 }
                 else
                 {
@@ -219,23 +212,82 @@ internal class HeightMapGeneratorCLI
                         float edgePerturb = _noise.Noise(x * 0.3f, y * 0.3f);
                         z += (int)(edgePerturb * 3);
                     }
-
-                    int dist = distMap[x, y];
-                    if (dist <= SMOOTH_RADIUS)
-                    {
-                        if (dist <= 1)
-                            z = -126;
-                        else if (dist == 2)
-                            z = -125;
-                        else
-                        {
-                            float lerpT = (dist - 2) / (float)(SMOOTH_RADIUS - 2);
-                            z = (int)MathF.Round(Lerp(-125, z, lerpT));
-                        }
-                    }
                 }
 
                 _heightData[x, y] = (sbyte)Math.Clamp(z, -127, 127);
+            }
+        }
+
+        // ---------------------------
+        // 3. Aplicar suavização entre biomas
+        // ---------------------------
+        for (int src = 0; src < NUM_CHANNELS - 1; src++)
+        {
+            int[,] distMap = new int[MapSizeX, MapSizeY];
+            var queue = new Queue<(int X, int Y)>();
+            for (int y = 0; y < MapSizeY; y++)
+            {
+                for (int x = 0; x < MapSizeX; x++)
+                {
+                    if (idxMap[x, y] == src)
+                    {
+                        distMap[x, y] = 0;
+                        queue.Enqueue((x, y));
+                    }
+                    else
+                    {
+                        distMap[x, y] = int.MaxValue;
+                    }
+                }
+            }
+
+            while (queue.Count > 0)
+            {
+                var (cx, cy) = queue.Dequeue();
+                int nd = distMap[cx, cy] + 1;
+                if (nd > SMOOTH_RADIUS)
+                    continue;
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    int ny = cy + dy;
+                    if (ny < 0 || ny >= MapSizeY) continue;
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        int nx = cx + dx;
+                        if (nx < 0 || nx >= MapSizeX) continue;
+                        if (nd < distMap[nx, ny])
+                        {
+                            distMap[nx, ny] = nd;
+                            queue.Enqueue((nx, ny));
+                        }
+                    }
+                }
+            }
+
+            for (int y = 0; y < MapSizeY; y++)
+            {
+                for (int x = 0; x < MapSizeX; x++)
+                {
+                    if (idxMap[x, y] <= src) continue;
+                    int dist = distMap[x, y];
+                    if (dist > SMOOTH_RADIUS) continue;
+
+                    if (src == 3 && idxMap[x, y] == src + 1)
+                        continue; // no smoothing from jungle to rock
+
+                    int z;
+                    if (dist <= 1)
+                        z = HeightRanges[src].Max;
+                    else if (dist == 2)
+                        z = HeightRanges[src + 1].Min;
+                    else
+                    {
+                        float lerpT = (dist - 2) / (float)(SMOOTH_RADIUS - 2);
+                        z = (int)MathF.Round(Lerp(HeightRanges[src + 1].Min, _heightData[x, y], lerpT));
+                    }
+                    _heightData[x, y] = (sbyte)Math.Clamp(z, -127, 127);
+                }
             }
         }
     }
@@ -250,19 +302,24 @@ internal class HeightMapGeneratorCLI
             return;
         }
 
-        int stepX = width / 4;
-        int stepY = height / 4;
-        int remX = width % 4;
-        int remY = height % 4;
+        int stepX = width / 3;
+        int stepY = height / 3;
+        int remX = width % 3;
+        int remY = height % 3;
 
         int offY = startY;
-        for (int qy = 0; qy < 4; qy++)
+        for (int qy = 0; qy < 3; qy++)
         {
             int h = stepY + (qy < remY ? 1 : 0);
             int offX = startX;
-            for (int qx = 0; qx < 4; qx++)
+            for (int qx = 0; qx < 3; qx++)
             {
                 int w = stepX + (qx < remX ? 1 : 0);
+                if (w == 0 || h == 0)
+                {
+                    Console.WriteLine($"Skipping zero-sized region {offX},{offY} size {w}x{h}");
+                    continue;
+                }
                 GenerateFractalRegion(offX, offY, w, h, groupsList, total);
                 offX += w;
             }
@@ -272,8 +329,8 @@ internal class HeightMapGeneratorCLI
 
     private void GenerateArea(int startX, int startY, int width, int height, List<Group> groupsList, float total)
     {
-        int endX = Math.Min(MapSize - 1, startX + width - 1);
-        int endY = Math.Min(MapSize - 1, startY + height - 1);
+        int endX = Math.Min(MapSizeX - 1, startX + width - 1);
+        int endY = Math.Min(MapSizeY - 1, startY + height - 1);
 
         for (int bx = startX; bx <= endX; bx += BlockSize)
         {
