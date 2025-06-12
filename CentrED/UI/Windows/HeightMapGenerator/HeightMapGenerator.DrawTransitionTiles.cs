@@ -231,10 +231,11 @@ public partial class HeightMapGenerator
     {
         Span<char> pattern = stackalloc char[8];
         ushort center = entry.Tiles[4];
+        var centerType = GetTerrainType(center);
         for (int i = 0; i < 8; i++)
         {
             ushort val = entry.Tiles[PatternMap[i]];
-            pattern[i] = val == center ? 'A' : 'B';
+            pattern[i] = GetTerrainType(val) == centerType ? 'A' : 'B';
         }
         return new string(pattern);
     }
