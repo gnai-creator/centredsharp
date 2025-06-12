@@ -35,6 +35,7 @@ public partial class HeightMapGenerator : Window
     private const int MaxTiles = 16 * 1024 * 1024;
     private const string GroupsFile = "heightmap_groups.json";
     private const string TransitionsFile = "heightmap_transitions.json";
+    private const string DragonModFile = "transition_tiles_dragonmod.json";
 
     private static readonly (sbyte Min, sbyte Max)[] HeightRanges =
     {
@@ -52,6 +53,7 @@ public partial class HeightMapGenerator : Window
 
     private string groupsPath = GroupsFile;
     private string transitionsPath = TransitionsFile;
+    private string dragonModPath = DragonModFile;
 
     private string heightMapPath = string.Empty;
     private sbyte[,]? heightData;
@@ -87,6 +89,8 @@ public partial class HeightMapGenerator : Window
     private string selectedGroup = string.Empty;
     private string selectedTransition = "sand-grass";
     private int selectedIndex = 0;
+
+    private readonly Dictionary<string, Dictionary<string, TransitionTile>> dragonModEntries = new();
     private string newGroupName = string.Empty;
 
     private string _statusText = string.Empty;

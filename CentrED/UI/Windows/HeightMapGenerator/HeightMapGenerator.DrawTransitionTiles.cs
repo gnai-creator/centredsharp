@@ -58,7 +58,20 @@ public partial class HeightMapGenerator
                 if (TinyFileDialogs.TryOpenFile("Load Entries", Environment.CurrentDirectory, new[] { "*.json" }, "JSON Files", false, out var path))
                     LoadTransitions(path);
             }
+            ImGui.SameLine();
+            if (ImGui.Button("Export DragonMod"))
+            {
+                if (TinyFileDialogs.TrySaveFile("Export DragonMod", dragonModPath, new[] { "*.json" }, "JSON Files", out var path))
+                    ExportDragonMod(path);
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("Load DragonMod"))
+            {
+                if (TinyFileDialogs.TryOpenFile("Load DragonMod", Environment.CurrentDirectory, new[] { "*.json" }, "JSON Files", false, out var path))
+                    LoadDragonMod(path);
+            }
         }
+        DrawDragonModEntries();
     }
 
     private void DrawTransitionSelector()
@@ -127,6 +140,22 @@ public partial class HeightMapGenerator
             ImGui.EndDragDropTarget();
         }
         ImGui.PopID();
+    }
+
+    private void DrawDragonModEntries()
+    {
+        if (dragonModEntries.Count == 0)
+            return;
+
+        ImGui.Text($"DragonMod Entries ({Path.GetFileName(dragonModPath)})");
+        if (ImGui.BeginChild("DragonModEntries", new Vector2(0, 100), ImGuiChildFlags.Borders))
+        {
+            foreach (var kv in dragonModEntries)
+            {
+                ImGui.Text($"{kv.Key} ({kv.Value.Count})");
+            }
+            ImGui.EndChild();
+        }
     }
 
     private (nint texPtr, Vector2 uv0, Vector2 uv1) CalculateButtonTexture(ushort tileId)
