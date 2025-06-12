@@ -71,8 +71,14 @@ public partial class HeightMapGenerator
             catch (Exception ex)
             {
                 Console.WriteLine($"Generation error: {ex.Message}");
+                CrashLogger.Log(ex);
                 _statusText = $"Generation failed: {ex.Message}";
                 _statusColor = UIManager.Red;
+            }
+            finally
+            {
+                showProgressPopup = false;
+                openProgressPopup = false;
             }
         }, token);
     }
