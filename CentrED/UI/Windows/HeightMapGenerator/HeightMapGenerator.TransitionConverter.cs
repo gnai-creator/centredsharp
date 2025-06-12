@@ -52,6 +52,18 @@ public partial class HeightMapGenerator
         {
             int width = map.GetLength(0);
             int height = map.GetLength(1);
+
+            // Pre-process transitions so we don't need to parse the key for every tile
+            var parsed = new Dictionary<TerrainType, List<(TerrainType bType, Dictionary<string, TransitionTile> dict)>>();
+            foreach (var kv in transitionTiles)
+            {
+                if (!TryParseKey(kv.Key, out var aType, out var bType))
+                    continue;
+                if (!parsed.TryGetValue(aType, out var list))
+                    list = parsed[aType] = new();
+                list.Add((bType, kv.Value));
+            }
+
             Tile[,] copy = (Tile[,])map.Clone();
 
             for (int y = 1; y < height - 1; y++)
@@ -59,50 +71,46 @@ public partial class HeightMapGenerator
                 for (int x = 1; x < width - 1; x++)
                 {
                     var center = copy[x, y];
-                    var counts = new Dictionary<TerrainType, int>();
-
-                    foreach (var (dx, dy) in NeighborOffsets)
-                    {
-                        var t = copy[x + dx, y + dy];
-                        if (t.Type == center.Type)
-                            continue;
-                        counts.TryGetValue(t.Type, out int c);
-                        counts[t.Type] = c + 1;
-                    }
-
-                    if (counts.Count == 0)
+                    if (!parsed.TryGetValue(center.Type, out var transitions))
                         continue;
 
-                    var bType = TerrainType.Water;
-                    int max = 0;
-                    foreach (var kv in counts)
+                    foreach (var (bType, dict) in transitions)
                     {
-                        if (kv.Value > max)
+                        bool hasB = false;
+                        Span<char> patternChars = stackalloc char[8];
+                        for (int i = 0; i < NeighborOffsets.Length; i++)
                         {
-                            max = kv.Value;
-                            bType = kv.Key;
+                            var (dx, dy) = NeighborOffsets[i];
+                            var t = copy[x + dx, y + dy];
+                            if (t.Type == bType)
+                                hasB = true;
+                            patternChars[i] = t.Type == center.Type ? 'A' : 'B';
                         }
-                    }
 
-                    if (max == 0)
-                        continue;
+                        if (!hasB)
+                            continue;
 
-                    Span<char> patternChars = stackalloc char[8];
-                    int i = 0;
-                    foreach (var (dx, dy) in NeighborOffsets)
-                    {
-                        patternChars[i++] = copy[x + dx, y + dy].Type == center.Type ? 'A' : 'B';
-                    }
-                    string pattern = new(patternChars);
+                        string pattern = new(patternChars);
+                        if (pattern == "AAAAAAAA")
+                            continue; // no transition when fully surrounded by A
 
-                    var key = $"{center.Type.ToString().ToLower()}-{bType.ToString().ToLower()}";
-                    if (transitionTiles.TryGetValue(key, out var dict) && dict.TryGetValue(pattern, out var tileInfo))
-                    {
-                        if (tileInfo.Id != 0)
+                        if (dict.TryGetValue(pattern, out var tileInfo) && tileInfo.Id != 0)
+                        {
                             map[x, y] = new Tile(center.Type, (ushort)tileInfo.Id);
+                            break; // apply only one transition per tile
+                        }
                     }
                 }
             }
+        }
+
+        private static bool TryParseKey(string key, out TerrainType a, out TerrainType b)
+        {
+            a = b = default;
+            var parts = key.Split('-', 2);
+            if (parts.Length != 2)
+                return false;
+            return Enum.TryParse(parts[0], true, out a) && Enum.TryParse(parts[1], true, out b);
         }
     }
 
