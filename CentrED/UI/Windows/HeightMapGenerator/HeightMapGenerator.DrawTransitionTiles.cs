@@ -210,7 +210,8 @@ public partial class HeightMapGenerator
             foreach (var entry in kv.Value)
             {
                 var pattern = ComputePattern(entry);
-                dict[pattern] = new TransitionTile { Id = entry.Tiles[4], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
+                int mappedIndex = GetTileIndexForPattern(pattern);
+                dict[pattern] = new TransitionTile { Id = entry.Tiles[mappedIndex], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
             }
             export[kv.Key] = dict;
         }
@@ -238,6 +239,28 @@ public partial class HeightMapGenerator
             pattern[i] = GetTerrainType(val) == centerType ? 'A' : 'B';
         }
         return new string(pattern);
+    }
+
+    internal static int GetTileIndexForPattern(string pattern)
+    {
+        bool n = pattern[1] == 'B';
+        bool e = pattern[3] == 'B';
+        bool s = pattern[5] == 'B';
+        bool w = pattern[7] == 'B';
+        bool nw = pattern[0] == 'B';
+        bool ne = pattern[2] == 'B';
+        bool se = pattern[4] == 'B';
+        bool sw = pattern[6] == 'B';
+
+        if (n && w && nw) return 0;
+        if (n && e && ne) return 2;
+        if (s && w && sw) return 6;
+        if (s && e && se) return 8;
+        if (n) return 1;
+        if (e) return 5;
+        if (s) return 7;
+        if (w) return 3;
+        return 4;
     }
 
 }
