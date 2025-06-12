@@ -36,16 +36,18 @@ public partial class HeightMapGenerator
 
     private class TransitionConverter
     {
+        // Neighbor order must match PatternMap in DrawTransitionTiles:
+        // [nw, n, ne, w, e, sw, s, se]
         private static readonly (int dx, int dy)[] NeighborOffsets = new (int, int)[]
         {
             (-1, -1), // NW
             (0, -1),  // N
             (1, -1),  // NE
+            (-1, 0),  // W
             (1, 0),   // E
-            (1, 1),   // SE
-            (0, 1),   // S
             (-1, 1),  // SW
-            (-1, 0)   // W
+            (0, 1),   // S
+            (1, 1)    // SE
         };
 
         public Dictionary<string, Dictionary<string, TransitionTile>> ConvertTransitions(Dictionary<string, List<ushort>> groups)
