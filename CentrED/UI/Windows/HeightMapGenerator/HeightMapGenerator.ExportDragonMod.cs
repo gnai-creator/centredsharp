@@ -10,7 +10,15 @@ public partial class HeightMapGenerator
     private void ExportDragonMod(string path)
     {
         var export = ConvertTransitions();
-        var options = new JsonSerializerOptions { WriteIndented = true, IncludeFields = true };
+        dragonModEntries.Clear();
+        foreach (var kv in export)
+            dragonModEntries[kv.Key] = kv.Value;
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            IncludeFields = true
+        };
         File.WriteAllText(path, JsonSerializer.Serialize(export, options));
         dragonModPath = path;
     }
