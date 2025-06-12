@@ -148,11 +148,32 @@ public partial class HeightMapGenerator
             return;
 
         ImGui.Text($"DragonMod Entries ({Path.GetFileName(dragonModPath)})");
-        if (ImGui.BeginChild("DragonModEntries", new Vector2(0, 100), ImGuiChildFlags.Borders))
+        if (ImGui.BeginChild("DragonModEntries", new Vector2(0, 200), ImGuiChildFlags.Borders))
         {
             foreach (var kv in dragonModEntries)
             {
-                ImGui.Text($"{kv.Key} ({kv.Value.Count})");
+                if (ImGui.TreeNode(kv.Key))
+                {
+                    foreach (var pat in kv.Value.OrderBy(p => p.Key))
+                    {
+                        var entry = pat.Value;
+                        ImGui.PushID($"{kv.Key}_{pat.Key}");
+                        ImGui.Text(pat.Key);
+                        ImGui.SameLine(120);
+                        int id = entry.Id;
+                        ImGui.InputInt("Id", ref id);
+                        entry.Id = id;
+                        ImGui.SameLine();
+                        ImGui.PushItemWidth(60);
+                        ImGui.InputInt("MinZ", ref entry.MinZ);
+                        ImGui.SameLine();
+                        ImGui.InputInt("MaxZ", ref entry.MaxZ);
+                        ImGui.PopItemWidth();
+                        kv.Value[pat.Key] = entry;
+                        ImGui.PopID();
+                    }
+                    ImGui.TreePop();
+                }
             }
             ImGui.EndChild();
         }
@@ -181,6 +202,11 @@ public partial class HeightMapGenerator
         foreach (var kv in transitions)
         {
             var dict = new Dictionary<string, TransitionTile>();
+            // initialize all 256 patterns
+            for (int i = 0; i < 256; i++)
+            {
+                dict[IntToPattern(i)] = new TransitionTile();
+            }
             foreach (var entry in kv.Value)
             {
                 var pattern = ComputePattern(entry);
@@ -189,6 +215,16 @@ public partial class HeightMapGenerator
             export[kv.Key] = dict;
         }
         return export;
+    }
+
+    private static string IntToPattern(int value)
+    {
+        Span<char> pattern = stackalloc char[8];
+        for (int i = 0; i < 8; i++)
+        {
+            pattern[7 - i] = (value & (1 << i)) != 0 ? 'B' : 'A';
+        }
+        return new string(pattern);
     }
 
     private string ComputePattern(TransitionEntry entry)
