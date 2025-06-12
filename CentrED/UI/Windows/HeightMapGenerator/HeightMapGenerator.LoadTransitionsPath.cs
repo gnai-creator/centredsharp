@@ -23,15 +23,18 @@ public partial class HeightMapGenerator
         {
             if (!File.Exists(path))
                 return;
-            var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, TransitionTile>>>(File.ReadAllText(path), new JsonSerializerOptions
+            var data = JsonSerializer.Deserialize<Dictionary<string, List<TransitionEntry>>>(File.ReadAllText(path), new JsonSerializerOptions
             {
                 IncludeFields = true
             });
             if (data == null)
                 return;
-            transitionTiles.Clear();
+            transitions.Clear();
             foreach (var kv in data)
-                transitionTiles[kv.Key] = kv.Value;
+                transitions[kv.Key] = kv.Value;
+            if (!transitions.ContainsKey(selectedTransition))
+                selectedTransition = transitions.Keys.FirstOrDefault() ?? string.Empty;
+            selectedIndex = 0;
             transitionsPath = path;
         }
         catch (Exception e)

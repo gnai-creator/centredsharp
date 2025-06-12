@@ -28,7 +28,8 @@ public partial class HeightMapGenerator
             }
         }
 
-        transitionConverter.ApplyTransitions(tileMap, transitionTiles);
+        var tileDict = ConvertTransitions();
+        transitionConverter.ApplyTransitions(tileMap, tileDict);
     }
 
     private static TerrainType GetTerrainType(sbyte z)

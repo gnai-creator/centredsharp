@@ -89,7 +89,7 @@ public partial class HeightMapGenerator
         }
         ImGui.Separator();
         ImGui.Text("Transition Tiles");
-        DrawTransitions(transitionTiles, ref selectedTransition);
+        DrawTransitionTiles();
         if (ImGui.Button("Save Transitions"))
         {
             if (TinyFileDialogs.TrySaveFile("Save Transitions", transitionsPath, new[] { "*.json" }, "JSON Files", out var path))
