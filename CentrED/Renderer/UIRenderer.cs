@@ -57,10 +57,13 @@ public partial class UIRenderer
     private List<Texture2D> _loadedTextures;
 
     private IntPtr? _fontTextureId;
-    
+    private IntPtr _monitorsData;
+
     public unsafe UIRenderer(GraphicsDevice graphicsDevice, GameWindow window)
     {
         _graphicsDevice = graphicsDevice;
+
+        _monitorsData = IntPtr.Zero;
 
         _loadedTextures = new List<Texture2D>();
 
@@ -86,12 +89,28 @@ public partial class UIRenderer
         }
     }
 
+    ~UIRenderer()
+    {
+        if (_monitorsData != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_monitorsData);
+            _monitorsData = IntPtr.Zero;
+        }
+    }
+
     private unsafe void UpdateMonitors()
     {
         ImGuiPlatformIOPtr platformIO = ImGui.GetPlatformIO();
-        Marshal.FreeHGlobal(platformIO.NativePtr->Monitors.Data);
+
+        if (_monitorsData != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_monitorsData);
+            _monitorsData = IntPtr.Zero;
+        }
+
         var displayIds = (uint*)SDL_GetDisplays(out int numMonitors);
         IntPtr data = Marshal.AllocHGlobal(Unsafe.SizeOf<ImGuiPlatformMonitor>() * numMonitors);
+        _monitorsData = data;
         platformIO.NativePtr->Monitors = new ImVector(numMonitors, numMonitors, data);
         for (int i = 0; i < numMonitors; i++)
         {
