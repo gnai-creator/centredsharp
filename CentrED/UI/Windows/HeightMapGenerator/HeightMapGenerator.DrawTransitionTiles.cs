@@ -14,7 +14,9 @@ namespace CentrED.UI.Windows;
 public partial class HeightMapGenerator
 {
     private static readonly Vector2 TileSize = new(44, 44);
-    private static readonly int[] PatternMap = { 0, 1, 2, 5, 8, 7, 6, 3 };
+    // Neighbor order is row-major starting from NW without the center:
+    // [nw, n, ne, w, e, sw, s, se]
+    private static readonly int[] PatternMap = { 0, 1, 2, 3, 5, 6, 7, 8 };
 
     private void DrawTransitionTiles()
     {
@@ -214,28 +216,14 @@ public partial class HeightMapGenerator
             if (parts.Length != 2)
                 continue;
 
-            var aTypeStr = parts[0];
-            var bTypeStr = parts[1];
-            var reverseKey = $"{bTypeStr}-{aTypeStr}";
-
             if (!export.TryGetValue(kv.Key, out var dict))
                 dict = export[kv.Key] = createDict();
-            if (!export.TryGetValue(reverseKey, out var revDict))
-                revDict = export[reverseKey] = createDict();
-
-            Enum.TryParse<TerrainType>(bTypeStr, true, out var bType);
 
             foreach (var entry in kv.Value)
             {
                 var pattern = ComputePattern(entry);
                 int mappedIndex = GetTileIndexForPattern(pattern);
                 dict[pattern] = new TransitionTile { Id = entry.Tiles[mappedIndex], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
-
-                var revPattern = ComputeReversedPattern(entry, bType);
-                if (!revDict.TryGetValue(revPattern, out var existing) || existing.Id == 0)
-                {
-                    revDict[revPattern] = new TransitionTile { Id = entry.Tiles[4], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
-                }
             }
         }
 
@@ -265,27 +253,18 @@ public partial class HeightMapGenerator
         return new string(pattern);
     }
 
-    private string ComputeReversedPattern(TransitionEntry entry, TerrainType reverseType)
-    {
-        Span<char> pattern = stackalloc char[8];
-        for (int i = 0; i < 8; i++)
-        {
-            ushort val = entry.Tiles[PatternMap[i]];
-            pattern[i] = GetTerrainType(val) == reverseType ? 'A' : 'B';
-        }
-        return new string(pattern);
-    }
 
     internal static int GetTileIndexForPattern(string pattern)
     {
+        // Pattern indices follow [nw,n,ne,w,e,sw,s,se]
         bool n = pattern[1] == 'B';
-        bool e = pattern[3] == 'B';
-        bool s = pattern[5] == 'B';
-        bool w = pattern[7] == 'B';
+        bool e = pattern[4] == 'B';
+        bool s = pattern[6] == 'B';
+        bool w = pattern[3] == 'B';
         bool nw = pattern[0] == 'B';
         bool ne = pattern[2] == 'B';
-        bool se = pattern[4] == 'B';
-        bool sw = pattern[6] == 'B';
+        bool se = pattern[7] == 'B';
+        bool sw = pattern[5] == 'B';
 
         if (n && w && nw) return 0;
         if (n && e && ne) return 2;
