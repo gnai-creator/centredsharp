@@ -221,6 +221,14 @@ public partial class HeightMapGenerator
 
             foreach (var entry in kv.Value)
             {
+                if (entry.Tiles == null || entry.Tiles.Length < 9)
+                {
+                    var tiles = new ushort[9];
+                    if (entry.Tiles != null)
+                        Array.Copy(entry.Tiles, tiles, Math.Min(entry.Tiles.Length, 9));
+                    entry.Tiles = tiles;
+                }
+
                 // Skip incomplete entries (center tile must be defined)
                 if (entry.Tiles[4] == 0)
                     continue;
@@ -251,6 +259,9 @@ public partial class HeightMapGenerator
     private string ComputePattern(TransitionEntry entry)
     {
         Span<char> pattern = stackalloc char[8];
+        if (entry.Tiles == null || entry.Tiles.Length < 9)
+            return "AAAAAAAA";
+
         ushort center = entry.Tiles[4];
         var centerType = GetTerrainType(center);
         for (int i = 0; i < 8; i++)
