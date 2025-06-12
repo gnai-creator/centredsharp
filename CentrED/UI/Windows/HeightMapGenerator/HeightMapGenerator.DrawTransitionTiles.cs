@@ -87,7 +87,7 @@ public partial class HeightMapGenerator
             for (int col = 0; col < 3; col++)
             {
                 int idx = row * 3 + col;
-                DrawTileButton(ref entry.Tiles[idx]);
+                DrawTileButton(ref entry.Tiles[idx], idx);
                 if (col < 2)
                     ImGui.SameLine();
             }
@@ -96,9 +96,9 @@ public partial class HeightMapGenerator
         ImGui.InputInt("MaxZ", ref entry.MaxZ);
     }
 
-    private void DrawTileButton(ref ushort id)
+    private void DrawTileButton(ref ushort id, int index)
     {
-        ImGui.PushID(Guid.NewGuid().ToString());
+        ImGui.PushID(index);
         if (id != 0)
         {
             var tex = CalculateButtonTexture(id);
