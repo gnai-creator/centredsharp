@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using CentrED.Server.Config;
+using CentrED.Utility;
 
 namespace CentrED.Server;
 
@@ -14,6 +15,7 @@ public class Application
         Console.WriteLine(title);
         Console.WriteLine("Copyright 2024 Kaczy" );
         Console.WriteLine("Credits to Andreas Schneider, StaticZ");
+        CrashLogger.Init();
         try
         {
             var config = ConfigRoot.Init(args);
