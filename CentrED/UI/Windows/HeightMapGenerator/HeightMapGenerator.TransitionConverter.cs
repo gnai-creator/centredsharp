@@ -94,7 +94,7 @@ public partial class HeightMapGenerator
                         if (pattern == "AAAAAAAA")
                             continue; // no transition when fully surrounded by A
 
-                        if (dict.TryGetValue(pattern, out var tileInfo) && tileInfo.Id != 0)
+                        if (dict.TryGetValue(pattern, out var tileInfo))
                         {
                             map[x, y] = new Tile(center.Type, (ushort)tileInfo.Id);
                             break; // apply only one transition per tile
