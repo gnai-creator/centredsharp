@@ -199,22 +199,46 @@ public partial class HeightMapGenerator
     private Dictionary<string, Dictionary<string, TransitionTile>> ConvertTransitions()
     {
         var export = new Dictionary<string, Dictionary<string, TransitionTile>>();
+
+        Dictionary<string, TransitionTile> CreateDict()
+        {
+            var d = new Dictionary<string, TransitionTile>();
+            for (int i = 0; i < 256; i++)
+                d[IntToPattern(i)] = new TransitionTile();
+            return d;
+        }
+
         foreach (var kv in transitions)
         {
-            var dict = new Dictionary<string, TransitionTile>();
-            // initialize all 256 patterns
-            for (int i = 0; i < 256; i++)
-            {
-                dict[IntToPattern(i)] = new TransitionTile();
-            }
+            var parts = kv.Key.Split('-', 2);
+            if (parts.Length != 2)
+                continue;
+
+            var aTypeStr = parts[0];
+            var bTypeStr = parts[1];
+            var reverseKey = $"{bTypeStr}-{aTypeStr}";
+
+            if (!export.TryGetValue(kv.Key, out var dict))
+                dict = export[kv.Key] = CreateDict();
+            if (!export.TryGetValue(reverseKey, out var revDict))
+                revDict = export[reverseKey] = CreateDict();
+
+            Enum.TryParse<TerrainType>(bTypeStr, true, out var bType);
+
             foreach (var entry in kv.Value)
             {
                 var pattern = ComputePattern(entry);
                 int mappedIndex = GetTileIndexForPattern(pattern);
                 dict[pattern] = new TransitionTile { Id = entry.Tiles[mappedIndex], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
+
+                var revPattern = ComputeReversedPattern(entry, bType);
+                if (!revDict.TryGetValue(revPattern, out var existing) || existing.Id == 0)
+                {
+                    revDict[revPattern] = new TransitionTile { Id = entry.Tiles[4], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
+                }
             }
-            export[kv.Key] = dict;
         }
+
         return export;
     }
 
@@ -237,6 +261,17 @@ public partial class HeightMapGenerator
         {
             ushort val = entry.Tiles[PatternMap[i]];
             pattern[i] = GetTerrainType(val) == centerType ? 'A' : 'B';
+        }
+        return new string(pattern);
+    }
+
+    private string ComputeReversedPattern(TransitionEntry entry, TerrainType reverseType)
+    {
+        Span<char> pattern = stackalloc char[8];
+        for (int i = 0; i < 8; i++)
+        {
+            ushort val = entry.Tiles[PatternMap[i]];
+            pattern[i] = GetTerrainType(val) == reverseType ? 'A' : 'B';
         }
         return new string(pattern);
     }
