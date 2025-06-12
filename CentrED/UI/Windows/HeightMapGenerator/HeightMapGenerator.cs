@@ -64,7 +64,14 @@ public partial class HeightMapGenerator : Window
     private readonly Perlin noise = new(Environment.TickCount);
 
     private readonly Dictionary<string, Group> tileGroups = new();
-    private readonly Dictionary<string, Dictionary<string, TransitionTile>> transitionTiles = new()
+    private class TransitionEntry
+    {
+        public ushort[] Tiles = new ushort[9];
+        public int MinZ;
+        public int MaxZ;
+    }
+
+    private readonly Dictionary<string, List<TransitionEntry>> transitions = new()
     {
         ["water-sand"] = new(),
         ["sand-water"] = new(),
@@ -76,8 +83,10 @@ public partial class HeightMapGenerator : Window
         ["rock-jungle"] = new(),
         ["rock-snow"] = new()
     };
+
     private string selectedGroup = string.Empty;
-    private string selectedTransition = string.Empty;
+    private string selectedTransition = "sand-grass";
+    private int selectedIndex = 0;
     private string newGroupName = string.Empty;
 
     private string _statusText = string.Empty;

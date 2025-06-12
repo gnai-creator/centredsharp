@@ -24,7 +24,7 @@ public partial class HeightMapGenerator
             WriteIndented = true,
             IncludeFields = true
         };
-        File.WriteAllText(path, JsonSerializer.Serialize(transitionTiles, options));
+        File.WriteAllText(path, JsonSerializer.Serialize(transitions, options));
         transitionsPath = path;
     }
 }
