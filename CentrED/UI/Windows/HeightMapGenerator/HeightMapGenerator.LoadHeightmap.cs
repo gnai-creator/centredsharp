@@ -34,12 +34,16 @@ public partial class HeightMapGenerator
 
             UpdateHeightData();
             heightMapPath = path;
+            _statusText = $"Loaded heightmap {Path.GetFileName(path)}";
+            _statusColor = UIManager.Green;
         }
         catch (Exception e)
         {
             Console.WriteLine($"Failed to load heightmap: {e.Message}");
             heightData = null;
             heightMapPath = string.Empty;
+            _statusText = $"Failed to load heightmap: {e.Message}";
+            _statusColor = UIManager.Red;
         }
     }
 }

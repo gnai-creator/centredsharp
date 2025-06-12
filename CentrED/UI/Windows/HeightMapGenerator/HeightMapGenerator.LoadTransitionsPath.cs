@@ -22,13 +22,23 @@ public partial class HeightMapGenerator
         try
         {
             if (!File.Exists(path))
+            {
+                _statusText = $"Transitions file not found: {Path.GetFileName(path)}";
+                _statusColor = UIManager.Red;
                 return;
+            }
+
             var data = JsonSerializer.Deserialize<Dictionary<string, List<TransitionEntry>>>(File.ReadAllText(path), new JsonSerializerOptions
             {
                 IncludeFields = true
             });
+
             if (data == null)
+            {
+                _statusText = "Invalid transitions file.";
+                _statusColor = UIManager.Red;
                 return;
+            }
             transitions.Clear();
             _tileTypeMap.Clear();
             foreach (var kv in data)
@@ -65,10 +75,14 @@ public partial class HeightMapGenerator
                 selectedTransition = transitions.Keys.FirstOrDefault() ?? string.Empty;
             selectedIndex = 0;
             transitionsPath = path;
+            _statusText = $"Loaded transitions from {Path.GetFileName(path)}";
+            _statusColor = UIManager.Green;
         }
         catch (Exception e)
         {
             Console.WriteLine($"Failed to load transitions: {e.Message}");
+            _statusText = $"Failed to load transitions: {e.Message}";
+            _statusColor = UIManager.Red;
         }
     }
 }

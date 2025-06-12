@@ -33,37 +33,46 @@ public partial class HeightMapGenerator
         showProgressPopup = true;
         generationTask = Task.Run(() =>
         {
-            var groupsList = tileGroups.Values.Where(g => g.Ids.Count > 0).ToList();
-            if (groupsList.Count == 0)
-            {
-                _statusText = "No groups configured.";
-                _statusColor = UIManager.Red;
-                return;
-            }
-
-            var total = MapSizeX * MapSizeY;
-            if (total > MaxTiles)
-                return;
-            CEDClient.BulkMode = true;
             try
             {
-                GenerateFractalRegion(x1, y1, MapSizeX, MapSizeY, groupsList, total, token);
+                var groupsList = tileGroups.Values.Where(g => g.Ids.Count > 0).ToList();
+                if (groupsList.Count == 0)
+                {
+                    _statusText = "No groups configured.";
+                    _statusColor = UIManager.Red;
+                    return;
+                }
+
+                var total = MapSizeX * MapSizeY;
+                if (total > MaxTiles)
+                    return;
+                CEDClient.BulkMode = true;
+                try
+                {
+                    GenerateFractalRegion(x1, y1, MapSizeX, MapSizeY, groupsList, total, token);
+                }
+                finally
+                {
+                    CEDClient.BulkMode = false;
+                    CEDClient.Flush();
+                    // Ensure pending packets are sent immediately after bulk mode
+                    CEDClient.Update();
+                }
+                if (token.IsCancellationRequested)
+                {
+                    _statusText = "Generation cancelled.";
+                    _statusColor = UIManager.Red;
+                }
+                else
+                {
+                    generationProgress = 1f;
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                CEDClient.BulkMode = false;
-                CEDClient.Flush();
-                // Ensure pending packets are sent immediately after bulk mode
-                CEDClient.Update();
-            }
-            if (token.IsCancellationRequested)
-            {
-                _statusText = "Generation cancelled.";
+                Console.WriteLine($"Generation error: {ex.Message}");
+                _statusText = $"Generation failed: {ex.Message}";
                 _statusColor = UIManager.Red;
-            }
-            else
-            {
-                generationProgress = 1f;
             }
         }, token);
     }
