@@ -2,6 +2,7 @@
 using CentrED.Client;
 using CentrED.Server;
 using CentrED.Utils;
+using CentrED.Utility;
 
 namespace CentrED;
 
@@ -18,7 +19,9 @@ public class Application
     public static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-        
+
+        CrashLogger.Init();
+
         Console.WriteLine($"Root Dir: {WorkDir}");
 
         Config.Initialize();
