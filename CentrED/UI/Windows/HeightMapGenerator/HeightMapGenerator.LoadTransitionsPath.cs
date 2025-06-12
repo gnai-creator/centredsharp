@@ -42,6 +42,15 @@ public partial class HeightMapGenerator
 
                 foreach (var entry in kv.Value)
                 {
+                    if (entry.Tiles == null)
+                        entry.Tiles = new ushort[9];
+                    else if (entry.Tiles.Length < 9)
+                    {
+                        var tiles = new ushort[9];
+                        Array.Copy(entry.Tiles, tiles, entry.Tiles.Length);
+                        entry.Tiles = tiles;
+                    }
+
                     for (int i = 0; i < entry.Tiles.Length; i++)
                     {
                         ushort id = entry.Tiles[i];
