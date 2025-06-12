@@ -221,9 +221,17 @@ public partial class HeightMapGenerator
 
             foreach (var entry in kv.Value)
             {
+                // Skip incomplete entries (center tile must be defined)
+                if (entry.Tiles[4] == 0)
+                    continue;
                 var pattern = ComputePattern(entry);
                 int mappedIndex = GetTileIndexForPattern(pattern);
-                dict[pattern] = new TransitionTile { Id = entry.Tiles[mappedIndex], MinZ = entry.MinZ, MaxZ = entry.MaxZ };
+                dict[pattern] = new TransitionTile
+                {
+                    Id = entry.Tiles[mappedIndex],
+                    MinZ = entry.MinZ,
+                    MaxZ = entry.MaxZ
+                };
             }
         }
 
