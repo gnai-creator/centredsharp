@@ -12,6 +12,8 @@ public class ConnectWindow : Window
 {
     public override string Name => "Connect";
 
+    public override ImGuiWindowFlags WindowFlags => ImGuiWindowFlags.NoResize;
+
     public override WindowState DefaultState => new()
     {
         IsOpen = true
@@ -33,10 +35,6 @@ public class ConnectWindow : Window
 
     protected override void InternalDraw()
     {
-        if (!Show)
-            return;
-
-        ImGui.Begin(Name, ref _show, ImGuiWindowFlags.NoResize);
         ImGui.SetWindowSize(Name, new Vector2(510, 250));
         if (ImGui.Combo("Profile", ref _profileIndex, ProfileManager.ProfileNames, ProfileManager.Profiles.Count))
         {
@@ -182,6 +180,5 @@ public class ConnectWindow : Window
             InfoColor = CEDClient.Running ? UIManager.Green : UIManager.Red;
         }
         ImGui.EndDisabled();
-        ImGui.End();
     }
 }
