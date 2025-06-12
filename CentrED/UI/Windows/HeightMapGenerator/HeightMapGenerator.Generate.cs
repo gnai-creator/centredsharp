@@ -9,6 +9,7 @@ using CentrED.Client;
 using CentrED.Client.Map;
 using CentrED.IO.Models;
 using CentrED.Network;
+using CentrED.Utility;
 using ImGuiNET;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
