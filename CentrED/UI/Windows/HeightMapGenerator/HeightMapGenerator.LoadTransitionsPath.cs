@@ -30,8 +30,28 @@ public partial class HeightMapGenerator
             if (data == null)
                 return;
             transitions.Clear();
+            _tileTypeMap.Clear();
             foreach (var kv in data)
+            {
                 transitions[kv.Key] = kv.Value;
+                var parts = kv.Key.Split('-', 2);
+                if (parts.Length != 2 ||
+                    !Enum.TryParse<TerrainType>(parts[0], true, out var main) ||
+                    !Enum.TryParse<TerrainType>(parts[1], true, out var other))
+                    continue;
+
+                foreach (var entry in kv.Value)
+                {
+                    for (int i = 0; i < entry.Tiles.Length; i++)
+                    {
+                        ushort id = entry.Tiles[i];
+                        if (id == 0)
+                            continue;
+                        var type = i == 4 ? main : other;
+                        _tileTypeMap[id] = type;
+                    }
+                }
+            }
             if (!transitions.ContainsKey(selectedTransition))
                 selectedTransition = transitions.Keys.FirstOrDefault() ?? string.Empty;
             selectedIndex = 0;
