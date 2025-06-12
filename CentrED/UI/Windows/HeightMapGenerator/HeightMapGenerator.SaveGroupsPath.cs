@@ -24,6 +24,12 @@ public partial class HeightMapGenerator
             WriteIndented = true,
             IncludeFields = true
         };
+        foreach (var grp in tileGroups.Values)
+        {
+            grp.Ids ??= new List<ushort>();
+            if (grp.Ids.Count == 0)
+                grp.Ids.Add(0);
+        }
         File.WriteAllText(path, JsonSerializer.Serialize(tileGroups, options));
         groupsPath = path;
     }

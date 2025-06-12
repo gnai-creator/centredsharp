@@ -43,23 +43,28 @@ public partial class HeightMapGenerator
             _tileTypeMap.Clear();
             foreach (var kv in data)
             {
-                transitions[kv.Key] = kv.Value;
+                var list = kv.Value ?? new List<TransitionEntry>();
+                foreach (var e in list)
+                {
+                    if (e.Tiles == null)
+                        e.Tiles = new ushort[9];
+                    else if (e.Tiles.Length < 9)
+                    {
+                        var tiles = new ushort[9];
+                        Array.Copy(e.Tiles, tiles, e.Tiles.Length);
+                        e.Tiles = tiles;
+                    }
+                }
+                transitions[kv.Key] = list;
                 var parts = kv.Key.Split('-', 2);
                 if (parts.Length != 2 ||
                     !Enum.TryParse<TerrainType>(parts[0], true, out var main) ||
                     !Enum.TryParse<TerrainType>(parts[1], true, out var other))
                     continue;
 
-                foreach (var entry in kv.Value)
+                foreach (var entry in list)
                 {
-                    if (entry.Tiles == null)
-                        entry.Tiles = new ushort[9];
-                    else if (entry.Tiles.Length < 9)
-                    {
-                        var tiles = new ushort[9];
-                        Array.Copy(entry.Tiles, tiles, entry.Tiles.Length);
-                        entry.Tiles = tiles;
-                    }
+                    // Tiles already normalized above
 
                     for (int i = 0; i < entry.Tiles.Length; i++)
                     {

@@ -42,7 +42,11 @@ public partial class HeightMapGenerator
 
             tileGroups.Clear();
             foreach (var kv in data)
-                tileGroups[kv.Key] = kv.Value;
+            {
+                var grp = kv.Value ?? new Group();
+                grp.Ids ??= new List<ushort>();
+                tileGroups[kv.Key] = grp;
+            }
 
             groupsPath = path;
             _statusText = $"Loaded groups from {Path.GetFileName(path)}";

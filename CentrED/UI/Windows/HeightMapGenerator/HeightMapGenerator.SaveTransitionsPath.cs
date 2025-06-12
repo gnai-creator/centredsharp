@@ -24,6 +24,23 @@ public partial class HeightMapGenerator
             WriteIndented = true,
             IncludeFields = true
         };
+        foreach (var kv in transitions)
+        {
+            var list = kv.Value;
+            if (list.Count == 0)
+                list.Add(new TransitionEntry { Tiles = new ushort[9] });
+            foreach (var entry in list)
+            {
+                if (entry.Tiles == null)
+                    entry.Tiles = new ushort[9];
+                else if (entry.Tiles.Length < 9)
+                {
+                    var tiles = new ushort[9];
+                    Array.Copy(entry.Tiles, tiles, entry.Tiles.Length);
+                    entry.Tiles = tiles;
+                }
+            }
+        }
         File.WriteAllText(path, JsonSerializer.Serialize(transitions, options));
         transitionsPath = path;
     }
