@@ -116,6 +116,59 @@ public partial class HeightMapGenerator
                 return false;
             return Enum.TryParse(parts[0], true, out a) && Enum.TryParse(parts[1], true, out b);
         }
+
+        public void ApplyTransitions(Tile[,] map, Dictionary<string, Dictionary<string, TransitionTile>> dict)
+        {
+            int width = map.GetLength(0);
+            int height = map.GetLength(1);
+
+            var source = (Tile[,])map.Clone();
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var center = source[x, y];
+                    var centerType = center.Type;
+
+                    Span<char> patternChars = stackalloc char[8];
+                    for (int i = 0; i < NeighborOffsets.Length; i++)
+                    {
+                        var (dx, dy) = NeighborOffsets[i];
+                        int nx = x + dx;
+                        int ny = y + dy;
+                        TerrainType nType = centerType;
+                        if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+                            nType = source[nx, ny].Type;
+                        patternChars[i] = nType == centerType ? 'A' : 'B';
+                    }
+
+                    string pattern = new(patternChars);
+
+                    for (int i = 0; i < NeighborOffsets.Length; i++)
+                    {
+                        var (dx, dy) = NeighborOffsets[i];
+                        int nx = x + dx;
+                        int ny = y + dy;
+                        if (nx < 0 || nx >= width || ny < 0 || ny >= height)
+                            continue;
+
+                        var neighborType = source[nx, ny].Type;
+                        if (neighborType == centerType)
+                            continue;
+
+                        string key = $"{centerType.ToString().ToLower()}-{neighborType.ToString().ToLower()}";
+                        if (!dict.TryGetValue(key, out var mappings))
+                            continue;
+                        if (mappings.TryGetValue(pattern, out var trans) && trans.Id != 0)
+                        {
+                            map[x, y].Id = (ushort)trans.Id;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private readonly TransitionConverter transitionConverter = new();
