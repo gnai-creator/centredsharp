@@ -25,6 +25,9 @@ Clone o repositório com:
 ```bash
 git clone --recursive https://github.com/kaczy93/centredsharp.git
 ```
+Caso já tenha clonado o repositório sem a opção `--recursive`,
+execute `git submodule update --init --recursive` para baixar
+os submódulos necessários.
 
 Em seguida, execute:
 
