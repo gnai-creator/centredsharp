@@ -36,4 +36,9 @@ public static class CrashLogger
             // ignored
         }
     }
+
+    public static void Log(Exception e)
+    {
+        LogException(e);
+    }
 }

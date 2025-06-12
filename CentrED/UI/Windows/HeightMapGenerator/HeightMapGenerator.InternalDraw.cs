@@ -101,14 +101,15 @@ public partial class HeightMapGenerator
         ImGui.TextColored(UIManager.Red, "This operation cannot be undone!");
         if (generationTask != null)
         {
-            if (generationTask.IsCompleted)
-            {
-                generationTask = null;
-                generationProgress = 0f;
-                cancellationSource?.Dispose();
-                cancellationSource = null;
-                showProgressPopup = false;
-            }
+                if (generationTask.IsCompleted)
+                {
+                    generationTask = null;
+                    generationProgress = 0f;
+                    cancellationSource?.Dispose();
+                    cancellationSource = null;
+                    showProgressPopup = false;
+                    openProgressPopup = false;
+                }
         }
 
         if (openProgressPopup)
