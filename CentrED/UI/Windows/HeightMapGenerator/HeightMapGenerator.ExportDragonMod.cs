@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 
 namespace CentrED.UI.Windows;
@@ -11,8 +10,7 @@ public partial class HeightMapGenerator
     private void ExportDragonMod(string path)
     {
         LoadTransitions();
-        var export = transitionConverter.ConvertTransitions(
-            tileGroups.ToDictionary(kv => kv.Key, kv => kv.Value.Ids));
+        var export = ConvertTransitions();
 
         dragonModEntries.Clear();
         foreach (var kv in export)
