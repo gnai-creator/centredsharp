@@ -200,7 +200,7 @@ public partial class HeightMapGenerator
     {
         var export = new Dictionary<string, Dictionary<string, TransitionTile>>();
 
-        Dictionary<string, TransitionTile> CreateDict()
+        Dictionary<string, TransitionTile> createDict()
         {
             var d = new Dictionary<string, TransitionTile>();
             for (int i = 0; i < 256; i++)
@@ -219,9 +219,9 @@ public partial class HeightMapGenerator
             var reverseKey = $"{bTypeStr}-{aTypeStr}";
 
             if (!export.TryGetValue(kv.Key, out var dict))
-                dict = export[kv.Key] = CreateDict();
+                dict = export[kv.Key] = createDict();
             if (!export.TryGetValue(reverseKey, out var revDict))
-                revDict = export[reverseKey] = CreateDict();
+                revDict = export[reverseKey] = createDict();
 
             Enum.TryParse<TerrainType>(bTypeStr, true, out var bType);
 
