@@ -48,60 +48,64 @@ public partial class HeightMapGenerator
             (-1, 0)   // W
         };
 
-        public void ApplyTransitions(Tile[,] map, Dictionary<string, Dictionary<string, TransitionTile>> transitionTiles)
+        public Dictionary<string, Dictionary<string, TransitionTile>> ConvertTransitions(Dictionary<string, List<ushort>> groups)
         {
-            int width = map.GetLength(0);
-            int height = map.GetLength(1);
+            var result = new Dictionary<string, Dictionary<string, TransitionTile>>();
 
-            // Pre-process transitions so we don't need to parse the key for every tile
-            var parsed = new Dictionary<TerrainType, List<(TerrainType bType, Dictionary<string, TransitionTile> dict)>>();
-            foreach (var kv in transitionTiles)
+            foreach (var group in groups)
             {
-                if (!TryParseKey(kv.Key, out var aType, out var bType))
+                var key = group.Key;
+                if (!TryParseKey(key, out var a, out var b))
                     continue;
-                if (!parsed.TryGetValue(aType, out var list))
-                    list = parsed[aType] = new();
-                list.Add((bType, kv.Value));
-            }
 
-            Tile[,] copy = (Tile[,])map.Clone();
+                var tiles = group.Value;
+                if (tiles.Count != 9)
+                    continue;
 
-            for (int y = 1; y < height - 1; y++)
-            {
-                for (int x = 1; x < width - 1; x++)
+                var patterns = GenerateAll8NeighborPatterns();
+                var mapping = new Dictionary<string, TransitionTile>();
+
+                int i = 0;
+                foreach (var pattern in patterns)
                 {
-                    var center = copy[x, y];
-                    if (!parsed.TryGetValue(center.Type, out var transitions))
+                    if (pattern == "AAAAAAAA")
                         continue;
 
-                    foreach (var (bType, dict) in transitions)
+                    mapping[pattern] = new TransitionTile
                     {
-                        bool hasB = false;
-                        Span<char> patternChars = stackalloc char[8];
-                        for (int i = 0; i < NeighborOffsets.Length; i++)
-                        {
-                            var (dx, dy) = NeighborOffsets[i];
-                            var t = copy[x + dx, y + dy];
-                            if (t.Type == bType)
-                                hasB = true;
-                            patternChars[i] = t.Type == center.Type ? 'A' : 'B';
-                        }
-
-                        if (!hasB)
-                            continue;
-
-                        string pattern = new(patternChars);
-                        if (pattern == "AAAAAAAA")
-                            continue; // no transition when fully surrounded by A
-
-                        if (dict.TryGetValue(pattern, out var tileInfo))
-                        {
-                            map[x, y] = new Tile(center.Type, (ushort)tileInfo.Id);
-                            break; // apply only one transition per tile
-                        }
-                    }
+                        Id = tiles[i % tiles.Count],
+                        MinZ = 0,
+                        MaxZ = 0
+                    };
+                    i++;
                 }
+
+                result[key] = mapping;
             }
+
+            return result;
+        }
+
+        private static List<string> GenerateAll8NeighborPatterns()
+        {
+            var result = new List<string>();
+            var chars = new char[8];
+            GenerateRecursive(result, chars, 0);
+            return result;
+        }
+
+        private static void GenerateRecursive(List<string> result, char[] chars, int index)
+        {
+            if (index == 8)
+            {
+                result.Add(new string(chars));
+                return;
+            }
+
+            chars[index] = 'A';
+            GenerateRecursive(result, chars, index + 1);
+            chars[index] = 'B';
+            GenerateRecursive(result, chars, index + 1);
         }
 
         private static bool TryParseKey(string key, out TerrainType a, out TerrainType b)
