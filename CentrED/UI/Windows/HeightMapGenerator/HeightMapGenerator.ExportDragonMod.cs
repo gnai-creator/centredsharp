@@ -9,6 +9,7 @@ public partial class HeightMapGenerator
 
     private void ExportDragonMod(string path)
     {
+        LoadTransitions();
         var export = ConvertTransitions();
         dragonModEntries.Clear();
         foreach (var kv in export)

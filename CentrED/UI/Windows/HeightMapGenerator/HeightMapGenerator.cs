@@ -66,6 +66,7 @@ public partial class HeightMapGenerator : Window
     private readonly Perlin noise = new(Environment.TickCount);
 
     private readonly Dictionary<string, Group> tileGroups = new();
+    private readonly Dictionary<ushort, TerrainType> _tileTypeMap = new();
     private class TransitionEntry
     {
         public ushort[] Tiles = new ushort[9];
