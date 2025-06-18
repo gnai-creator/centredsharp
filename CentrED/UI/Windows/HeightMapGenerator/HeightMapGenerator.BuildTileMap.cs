@@ -19,6 +19,13 @@ public partial class HeightMapGenerator
 
     private void EnsureTileMap(bool applyTransitions = false)
     {
+        if (tileGroups.Count == 0 || heightData == null)
+        {
+            _statusText = "Height data or tile groups not loaded.";
+            _statusColor = UIManager.Red;
+            return;
+        }
+
         if (tileMap != null && tileMap.Length < MapSizeX * MapSizeY)
             tileMap = new Tile[MapSizeX, MapSizeY];
 

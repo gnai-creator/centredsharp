@@ -28,6 +28,13 @@ public partial class HeightMapGenerator
         if (generationTask != null && !generationTask.IsCompleted)
             return;
 
+        if (tileGroups.Count == 0 || heightData == null)
+        {
+            _statusText = "Height data or tile groups not loaded.";
+            _statusColor = UIManager.Red;
+            return;
+        }
+
         _statusText = string.Empty;
         cancellationSource = new CancellationTokenSource();
         var token = cancellationSource.Token;
