@@ -19,7 +19,7 @@ public partial class HeightMapGenerator
             return;
         }
 
-        // var groupsByHeight = BuildGroupsByHeightWithNames(groups);
+        var groupsByHeight = BuildGroupsByHeightWithNames(groups);
         var defaultCandidates = groups.Select(kv => (kv.Key, kv.Value)).ToArray();
 
         // Send rows in chunks of 8 tiles to avoid gaps between lines
@@ -34,7 +34,14 @@ public partial class HeightMapGenerator
             y += height;
         }
 
-        // Garante que todos os dados sejam enviados
-        Application.ClientPacketQueue.Enqueue(new ServerFlushPacket());
+        Console.WriteLine("[DEBUG] Todos os pacotes de dados enfileirados, aguardando fila esvaziar para enviar flush...");
+        while (!Application.ClientPacketQueue.IsEmpty)
+        {
+            await Task.Delay(10);
+        }
+        Console.WriteLine("[DEBUG] Fila vazia, enviando flush");
+        CEDClient.Send(new ServerFlushPacket());
+        Console.WriteLine("[DEBUG] Flush enviado diretamente");
+        Console.WriteLine("[DEBUG] Fim de GenerateLines");
     }
 }

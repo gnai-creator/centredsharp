@@ -2,6 +2,7 @@
 using CentrED.Network;
 using CentrED.Server.Config;
 using CentrED.Utility;
+using System.Buffers;
 
 namespace CentrED.Server.Map;
 
@@ -85,7 +86,7 @@ public sealed partial class ServerLandscape : BaseLandscape, IDisposable, ILoggi
             PacketHandlers.RegisterPacketHandler(0x0A, 14, OnMoveStaticPacket);
             PacketHandlers.RegisterPacketHandler(0x0B, 12, OnHueStaticPacket);
             PacketHandlers.RegisterPacketHandler(0x0E, 0, OnLargeScaleCommandPacket);
-            
+
             //Cache entire strip of chunks to reduce IO in case someone is doing naive iteration over entire map
             BlockCache.Resize(Math.Max(config.Map.Width, config.Map.Height) + 1);
         }
@@ -414,7 +415,7 @@ public sealed partial class ServerLandscape : BaseLandscape, IDisposable, ILoggi
                     if (index.Lookup >= _statics.Length && index.Length > 0)
                     {
                         _logger.LogWarn($"Static block {x},{y} beyond file stream. Lookup: {index.Lookup}, Length: {index.Length}");
-                        toFix.Add((x,y));
+                        toFix.Add((x, y));
                     }
                 }
             }
@@ -423,7 +424,7 @@ public sealed partial class ServerLandscape : BaseLandscape, IDisposable, ILoggi
                 Console.WriteLine("Do you wish to drop these blocks to fix statics file? [y/n]");
                 if (Console.ReadLine() == "y")
                 {
-                    foreach (var (x,y) in toFix)
+                    foreach (var (x, y) in toFix)
                     {
                         var offset = GetStaidxOffset(x, y);
                         _staidx.Position = offset;

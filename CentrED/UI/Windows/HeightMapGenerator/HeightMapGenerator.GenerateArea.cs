@@ -29,7 +29,33 @@ public partial class HeightMapGenerator
         (string Name, Group Group)[] defaultCandidates,
         CancellationToken ct)
     {
+        if (generationTask != null && !generationTask.IsCompleted)
+            return;
 
+        if (heightData == null)
+        {
+            Console.WriteLine("[ERROR] heightData está nulo!");
+            return;
+        }
+        if (tileMap == null)
+        {
+            Console.WriteLine("[ERROR] tileMap está nulo!");
+        }
+        if (groupsByHeight == null)
+        {
+            Console.WriteLine("[ERROR] groupsByHeight está nulo!");
+            return;
+        }
+        if (defaultCandidates == null)
+        {
+            Console.WriteLine("[ERROR] defaultCandidates está nulo!");
+            return;
+        }
+        if (enviromentStatics == null)
+        {
+            Console.WriteLine("[ERROR] enviromentStatics está nulo!");
+            return;
+        }
 
         int endX = startX + width - 1;
         int endY = startY + height - 1;
@@ -46,6 +72,11 @@ public partial class HeightMapGenerator
 
         var envAreas = enviromentStatics.Keys.ToDictionary(k => k, _ => new List<AreaInfo>());
 
+        if (groupNames == null)
+        {
+            Console.WriteLine("[ERROR] groupNames está nulo!");
+            return;
+        }
         for (int bx = startBlockX; bx <= endBlockX && !ct.IsCancellationRequested; bx++)
         {
             for (int by = startBlockY; by <= endBlockY && !ct.IsCancellationRequested; by++)
@@ -62,17 +93,21 @@ public partial class HeightMapGenerator
                         if (x < startX || x > endX)
                             continue;
 
-                        if (heightData == null)
+                        int arrX = x - x1;
+                        int arrY = y - y1;
+                        if (heightData == null || arrX < 0 || arrY < 0 || arrX >= heightData.GetLength(0) || arrY >= heightData.GetLength(1))
+                        {
+                            Console.WriteLine($"[ERROR] heightData acesso inválido: x={x}, y={y}, x1={x1}, y1={y1}, arrX={arrX}, arrY={arrY}, size=({heightData?.GetLength(0)}, {heightData?.GetLength(1)})");
                             continue;
-
-                        var z = heightData[x - x1, y - y1];
+                        }
+                        var z = heightData[arrX, arrY];
                         altitudes[idx] = z;
 
                         ushort id;
                         string gname;
-                        if (tileMap != null)
+                        if (tileMap != null && arrX >= 0 && arrY >= 0 && arrX < tileMap.GetLength(0) && arrY < tileMap.GetLength(1))
                         {
-                            var tile = tileMap[x - x1, y - y1];
+                            var tile = tileMap[arrX, arrY];
                             id = tile.Id;
                             gname = tile.GroupName;
                         }
@@ -163,10 +198,14 @@ public partial class HeightMapGenerator
         var maxAltitude = altitudes.Max();
 
         // Envia o mapa de altitude
+        Console.WriteLine("[DEBUG] Enfileirando pacote de altitude");
         ClientPacketQueue.Enqueue(new LargeScaleOperationPacket([area], new LSOSetAltitude(minAltitude, maxAltitude)));
+        Console.WriteLine("[DEBUG] Pacote de altitude enfileirado");
 
         // Envia o mapa de land tiles
+        Console.WriteLine("[DEBUG] Enfileirando pacote de land");
         ClientPacketQueue.Enqueue(new LargeScaleOperationPacket([area], new LSODrawLand(ids)));
+        Console.WriteLine("[DEBUG] Pacote de land enfileirado");
 
         // Envia statics em lotes pequenos
         foreach (var env in enviromentStatics)
@@ -196,11 +235,24 @@ public partial class HeightMapGenerator
                 {
                     if (!CEDClient.Running) // Verifica se ainda está conectado
                         return;
-
                     var chunk = areas.Skip(i).Take(25).ToArray();
+                    Console.WriteLine($"[DEBUG] Enfileirando pacote de statics: {env.Key}, chunk {i / 25}");
                     ClientPacketQueue.Enqueue(new LargeScaleOperationPacket(chunk, new LSOAddStatics(envIds, chance, LSO.StaticsPlacement.Top, 0)));
+                    Console.WriteLine($"[DEBUG] Pacote de statics enfileirado: {env.Key}, chunk {i / 25}");
                 }
             }
         }
+
+        Console.WriteLine("[DEBUG] Todos os pacotes de dados enfileirados, aguardando fila esvaziar para enviar flush...");
+        while (!Application.ClientPacketQueue.IsEmpty)
+        {
+            await Task.Delay(10); // Aguarda a fila esvaziar
+        }
+        Console.WriteLine("[DEBUG] Fila vazia, enviando flush");
+        CEDClient.Send(new ServerFlushPacket());
+        Console.WriteLine("[DEBUG] Flush enviado diretamente");
+
+        Console.WriteLine("[DEBUG] Fim de GenerateArea");
+        Console.WriteLine("[DEBUG] Fim da Task de geração");
     }
 }

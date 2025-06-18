@@ -38,34 +38,36 @@ public partial class HeightMapGenerator
 
         generationTask = Task.Run(async () =>
         {
-            // Heavy initialization runs in the background to prevent the main
-            // thread from blocking and disconnecting the client.
-            if (!EnsureTileMap(applyTransitions))
-                return;
-
-            var total = MapSizeX * MapSizeY;
-            if (total > MAX_TILES)
-                return;
-
             try
             {
-                await GenerateLines(tileGroups
-                    .Where(kv => kv.Value.Ids.Count > 0)
-                    .ToDictionary(kv => kv.Key, kv => kv.Value), token);
-            }
-            finally
-            {
-                ClientPacketQueue.Enqueue(new ServerFlushPacket());
-            }
+                var total = MapSizeX * MapSizeY;
+                if (total > MAX_TILES)
+                    return;
 
-            if (token.IsCancellationRequested)
-            {
-                _statusText = "Generation cancelled.";
-                _statusColor = UIManager.Red;
+                try
+                {
+                    await GenerateLines(tileGroups
+                        .Where(kv => kv.Value.Ids.Count > 0)
+                        .ToDictionary(kv => kv.Key, kv => kv.Value), token);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERROR] Exceção em GenerateLines: {ex}");
+                }
+
+                if (token.IsCancellationRequested)
+                {
+                    _statusText = "Generation cancelled.";
+                    _statusColor = UIManager.Red;
+                }
+                else
+                {
+                    refreshMapPending = true;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                refreshMapPending = true;
+                Console.WriteLine($"[ERROR] Exceção em Task.Run: {ex}");
             }
         }, token);
     }

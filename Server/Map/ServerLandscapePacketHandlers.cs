@@ -131,7 +131,7 @@ public partial class ServerLandscape
 
         var sourceBlock = GetStaticBlock(staticInfo);
         var targetBlock = GetStaticBlock((ushort)(newX / 8), (ushort)(newY / 8));
-        
+
         var tile = sourceBlock.Find(staticInfo);
         if (tile == null)
         {
@@ -200,7 +200,7 @@ public partial class ServerLandscape
     }
 
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
-    private void OnLargeScaleCommandPacket(SpanReader reader, NetState<CEDServer> ns)
+    internal void OnLargeScaleCommandPacket(SpanReader reader, NetState<CEDServer> ns)
     {
         if (!PacketHandlers.ValidateAccess(ns, AccessLevel.Developer))
             return;
@@ -322,9 +322,9 @@ public partial class ServerLandscape
             foreach (var (blockX, blockY) in extraAffectedBlocks)
             {
                 var blockId = BlockIndex(blockX, blockY);
-                if(affectedBlocks[blockId])
+                if (affectedBlocks[blockId])
                     continue;
-                
+
                 foreach (var netState in GetBlockSubscriptions(blockX, blockY)!)
                 {
                     clients[netState].Add(new BlockCoords(blockX, blockY));
@@ -332,7 +332,7 @@ public partial class ServerLandscape
 
                 UpdateRadar(ns, (ushort)(blockX * 8), (ushort)(blockY * 8));
             }
-            
+
 
             foreach (var (netState, blocks) in clients)
             {
@@ -377,25 +377,25 @@ public partial class ServerLandscape
             switch (copyMove.Type)
             {
                 case LSO.CopyMove.Copy:
-                {
-                    foreach (var staticTile in staticTiles)
                     {
-                        InternalAddStatic(targetStaticsBlock, new StaticTile(staticTile.Id, x, y, staticTile.Z, staticTile.Hue));
+                        foreach (var staticTile in staticTiles)
+                        {
+                            InternalAddStatic(targetStaticsBlock, new StaticTile(staticTile.Id, x, y, staticTile.Z, staticTile.Hue));
+                        }
+                        break;
                     }
-                    break;
-                }
                 case LSO.CopyMove.Move:
-                {
-                    foreach (var staticTile in staticTiles)
                     {
-                        InternalRemoveStatic(staticTile.Block!, staticTile);
-                        InternalSetStaticPos(staticTile, x, y);
-                        InternalAddStatic(targetStaticsBlock, staticTile);
+                        foreach (var staticTile in staticTiles)
+                        {
+                            InternalRemoveStatic(staticTile.Block!, staticTile);
+                            InternalSetStaticPos(staticTile, x, y);
+                            InternalAddStatic(targetStaticsBlock, staticTile);
+                        }
+                        break;
                     }
-                    break;
-                }
             }
-            additionalAffectedBlocks.Add(((ushort)(x / 8), (ushort)(y/ 8)));
+            additionalAffectedBlocks.Add(((ushort)(x / 8), (ushort)(y / 8)));
         }
         else if (lso is LsSetAltitude setAltitude)
         {
@@ -405,18 +405,18 @@ public partial class ServerLandscape
             switch (setAltitude.Type)
             {
                 case LSO.SetAltitude.Terrain:
-                {
-                    var newZ = (sbyte)(minZ + Random.Next(maxZ - minZ + 1));
-                    diff = (sbyte)(newZ - landTile.Z);
-                    InternalSetLandZ(landTile, newZ);
-                    break;
-                }
+                    {
+                        var newZ = (sbyte)(minZ + Random.Next(maxZ - minZ + 1));
+                        diff = (sbyte)(newZ - landTile.Z);
+                        InternalSetLandZ(landTile, newZ);
+                        break;
+                    }
                 case LSO.SetAltitude.Relative:
-                {
-                    diff = setAltitude.RelativeZ;
-                    InternalSetLandZ(landTile, (sbyte)Math.Clamp(landTile.Z + diff, -128, 127));
-                    break;
-                }
+                    {
+                        diff = setAltitude.RelativeZ;
+                        InternalSetLandZ(landTile, (sbyte)Math.Clamp(landTile.Z + diff, -128, 127));
+                        break;
+                    }
             }
 
             foreach (var staticTile in staticTiles)
@@ -462,32 +462,32 @@ public partial class ServerLandscape
             switch (addStatics.PlacementType)
             {
                 case LSO.StaticsPlacement.Terrain:
-                {
-                    InternalSetStaticZ(staticItem, landTile.Z);
-                    break;
-                }
-                case LSO.StaticsPlacement.Top:
-                {
-                    var topZ = landTile.Z;
-                    foreach (var staticTile in staticTiles)
                     {
-                        sbyte staticTop = Math.Clamp
-                        (
-                            (sbyte)(staticTile.Z + TileDataProvider.StaticTiles[staticTile.Id].Height),
-                            (sbyte)-128,
-                            (sbyte)127
-                        );
-                        if (staticTop > topZ)
-                            topZ = staticTop;
+                        InternalSetStaticZ(staticItem, landTile.Z);
+                        break;
                     }
-                    InternalSetStaticZ(staticItem, topZ);
-                    break;
-                }
+                case LSO.StaticsPlacement.Top:
+                    {
+                        var topZ = landTile.Z;
+                        foreach (var staticTile in staticTiles)
+                        {
+                            sbyte staticTop = Math.Clamp
+                            (
+                                (sbyte)(staticTile.Z + TileDataProvider.StaticTiles[staticTile.Id].Height),
+                                (sbyte)-128,
+                                (sbyte)127
+                            );
+                            if (staticTop > topZ)
+                                topZ = staticTop;
+                        }
+                        InternalSetStaticZ(staticItem, topZ);
+                        break;
+                    }
                 case LSO.StaticsPlacement.Fix:
-                {
-                    InternalSetStaticZ(staticItem, addStatics.FixedZ);
-                    break;
-                }
+                    {
+                        InternalSetStaticZ(staticItem, addStatics.FixedZ);
+                        break;
+                    }
             }
             var staticBlock = GetStaticBlock((ushort)(staticItem.X / 8), (ushort)(staticItem.Y / 8));
             InternalAddStatic(staticBlock, staticItem);

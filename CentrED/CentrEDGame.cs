@@ -6,6 +6,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using static CentrED.Application;
 using static SDL3.SDL;
+using CentrED.Client.Map;
+using CentrED.Client;
 
 namespace CentrED;
 
@@ -16,7 +18,7 @@ public class CentrEDGame : Game
     public MapManager MapManager;
     public UIManager UIManager;
     public bool Closing { get; set; }
-    
+
     public CentrEDGame()
     {
         _gdm = new GraphicsDeviceManager(this)
@@ -32,12 +34,12 @@ public class CentrEDGame : Game
         };
         var appName = Assembly.GetExecutingAssembly().GetName();
         Window.Title = $"{appName.Name} {appName.Version}";
-        
+
         IsMouseVisible = true;
         Window.AllowUserResizing = true;
         Window.ClientSizeChanged += OnWindowResized;
     }
-    
+
     protected override void Initialize()
     {
         if (_gdm.GraphicsDevice.Adapter.IsProfileSupported(GraphicsProfile.HiDef))
@@ -50,7 +52,7 @@ public class CentrEDGame : Game
         Log.Start(LogTypes.All);
         MapManager = new MapManager(_gdm.GraphicsDevice, Window);
         UIManager = new UIManager(_gdm.GraphicsDevice, Window);
-        RadarMap.Initialize(_gdm.GraphicsDevice);
+        CentrED.Map.RadarMap.Initialize(_gdm.GraphicsDevice);
 
         base.Initialize();
     }
@@ -73,7 +75,25 @@ public class CentrEDGame : Game
             var packetsProcessed = 0;
             while (packetsProcessed < 10000 && ClientPacketQueue.TryDequeue(out var packet))
             {
-                CEDClient.Send(packet);
+                try
+                {
+                    // LargeScaleOperationPacket (opcode 0x0E) nunca deve ser comprimido!
+                    if (packet is LargeScaleOperationPacket)
+                    {
+                        Console.WriteLine($"[DEBUG] Enviando pacote: LargeScaleOperationPacket (opcode 0x0E)");
+                        CEDClient.Send(packet); // NUNCA use SendCompressed aqui!
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[DEBUG] Enviando pacote: {packet.GetType().Name}");
+                        CEDClient.Send(packet);
+                    }
+                    Console.WriteLine($"[DEBUG] Pacote enviado: {packet.GetType().Name}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERROR] Falha ao enviar pacote: {ex}");
+                }
                 packetsProcessed++;
             }
             Metrics.Start("UpdateClient");
@@ -82,9 +102,10 @@ public class CentrEDGame : Game
             MapManager.Update(gameTime, IsActive, !UIManager.CapturingMouse, !UIManager.CapturingKeyboard);
             Config.AutoSave();
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             UIManager.ReportCrash(e);
+            Console.WriteLine($"[ERROR] Exceção no Update: {e}");
         }
         base.Update(gameTime);
     }
