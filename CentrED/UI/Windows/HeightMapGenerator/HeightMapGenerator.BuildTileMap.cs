@@ -65,7 +65,7 @@ public partial class HeightMapGenerator
             return;
         }
 
-        var groupsByHeight = BuildGroupsByHeightWithNames(groupsDict);
+        groupsByHeight = BuildGroupsByHeightWithNames(groupsDict);
         var defaultCandidates = groupsDict.Select(kv => (kv.Key, kv.Value)).ToArray();
 
         Parallel.For(0, MapSizeY, y =>

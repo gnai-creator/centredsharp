@@ -58,7 +58,7 @@ public partial class HeightMapGenerator
             }
             finally
             {
-                Application.ClientPacketQueue.Enqueue(new ServerFlushPacket());
+                ClientPacketQueue.Enqueue(new ServerFlushPacket());
             }
 
             if (token.IsCancellationRequested)

@@ -57,6 +57,7 @@ public partial class HeightMapGenerator : Window
 
     private string heightMapPath = string.Empty;
     private sbyte[,]? heightData;
+    private Dictionary<sbyte, (string Name, Group Group)[]> groupsByHeight;
     private Color[]? heightMapTextureData;
     private int heightMapWidth;
     private int heightMapHeight;
