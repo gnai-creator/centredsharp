@@ -17,17 +17,10 @@ public partial class HeightMapGenerator
     /// explicitly call <c>BuildTileMap</c> everywhere.
     /// </summary>
 
-    private void EnsureTileMap(bool applyTransitions = false)
+    private bool EnsureTileMap(bool applyTransitions = false)
     {
-        if (heightData == null)
-            UpdateHeightData();
-        InitializeTileIdToType();
-        if (tileGroups.Count == 0 || heightData == null)
-        {
-            _statusText = "Height data or tile groups not loaded.";
-            _statusColor = UIManager.Red;
-            return;
-        }
+        if (!ValidateLoadedData())
+            return false;
 
         if (tileMap != null && tileMap.Length < MapSizeX * MapSizeY)
             tileMap = new Tile[MapSizeX, MapSizeY];
@@ -42,6 +35,8 @@ public partial class HeightMapGenerator
         }
 
         BuildTileMap(applyTransitions);
+
+        return true;
 
     }
     private void BuildTileMap(bool applyTransitions = false)
