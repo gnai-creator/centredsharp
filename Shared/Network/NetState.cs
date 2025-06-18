@@ -137,14 +137,32 @@ public class NetState<T> : IDisposable, ILogging where T : ILogging
         try
         {
             var sendWriter = SendPipe.Writer;
-            var buffer = sendWriter.AvailableToWrite();
-            if (buffer.Length < data.Length)
+            while (data.Length > 0)
             {
-                Flush();
-                buffer = sendWriter.AvailableToWrite();
+                var buffer = sendWriter.AvailableToWrite();
+
+                if (buffer.Length == 0)
+                {
+                    Flush();
+                    buffer = sendWriter.AvailableToWrite();
+
+                    if (buffer.Length == 0)
+                    {
+                        // nothing we can do, avoid tight loop
+                        break;
+                    }
+                }
+
+                var bytesToCopy = Math.Min(data.Length, buffer.Length);
+                data[..bytesToCopy].CopyTo(buffer);
+                sendWriter.Advance((uint)bytesToCopy);
+                data = data[bytesToCopy..];
+
+                if (data.Length > 0)
+                {
+                    Flush();
+                }
             }
-            data.CopyTo(buffer);
-            sendWriter.Advance((uint)data.Length);
         }
         catch (Exception e)
         {
