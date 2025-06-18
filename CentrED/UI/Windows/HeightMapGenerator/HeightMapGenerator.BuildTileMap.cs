@@ -17,8 +17,11 @@ public partial class HeightMapGenerator
     /// explicitly call <c>BuildTileMap</c> everywhere.
     /// </summary>
 
-    private void EnsureTileMap(bool applyTransitions = false)
+    private bool EnsureTileMap(bool applyTransitions = false)
     {
+        if (!ValidateLoadedData())
+            return false;
+
         if (tileMap != null && tileMap.Length < MapSizeX * MapSizeY)
             tileMap = new Tile[MapSizeX, MapSizeY];
 
@@ -34,6 +37,8 @@ public partial class HeightMapGenerator
             UpdateHeightData();
         InitializeTileIdToType();
         BuildTileMap(applyTransitions);
+
+        return true;
 
     }
     private void BuildTileMap(bool applyTransitions = false)

@@ -28,6 +28,9 @@ public partial class HeightMapGenerator
         if (generationTask != null && !generationTask.IsCompleted)
             return;
 
+        if (!ValidateLoadedData())
+            return;
+
         _statusText = string.Empty;
         cancellationSource = new CancellationTokenSource();
         var token = cancellationSource.Token;
@@ -36,7 +39,8 @@ public partial class HeightMapGenerator
         {
             // Heavy initialization runs in the background to prevent the main
             // thread from blocking and disconnecting the client.
-            EnsureTileMap(applyTransitions);
+            if (!EnsureTileMap(applyTransitions))
+                return;
 
             var total = MapSizeX * MapSizeY;
             if (total > MAX_TILES)
