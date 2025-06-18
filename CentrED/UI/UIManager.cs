@@ -22,14 +22,14 @@ public class UIManager
     public static extern IntPtr igGetCurrentWindow();
     [DllImport("cimgui", CallingConvention = CallingConvention.Cdecl)]
     public static extern void igBringWindowToDisplayFront(IntPtr window);
-    
+
     public enum Category
     {
         Main,
         Tools,
         Batch,
     }
-    
+
     public static Vector4 Red = new(1, 0, 0, 1);
     public static Vector4 Green = new(0, 1, 0, 1);
     public static Vector4 Blue = new(0, 0, 1, 1);
@@ -38,7 +38,7 @@ public class UIManager
     internal UIRenderer _uiRenderer;
     private GraphicsDevice _graphicsDevice;
     private GameWindow _GameWindow;
-    
+
     private uint _MainWindowID;
     // Event handling
     private SDL_EventFilter _EventFilter;
@@ -59,7 +59,7 @@ public class UIManager
     internal MinimapWindow MinimapWindow;
     internal DebugWindow DebugWindow;
     public bool ShowTestWindow;
-    
+
     public unsafe UIManager(GraphicsDevice gd, GameWindow window)
     {
         _graphicsDevice = gd;
@@ -69,15 +69,15 @@ public class UIManager
         ImGui.SetCurrentContext(context);
         var io = ImGui.GetIO();
         var sdl_backend = SDL_GetCurrentVideoDriver();
-       
+
         _HasCaptureAndGlobalMouse = backendsWithGlobalMouseState.Contains(sdl_backend);
-        
+
         io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
         io.BackendFlags |= ImGuiBackendFlags.RendererHasViewports;
         io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
-        if(_HasCaptureAndGlobalMouse)
+        if (_HasCaptureAndGlobalMouse)
             io.BackendFlags |= ImGuiBackendFlags.PlatformHasViewports;
-        
+
         ImGuiViewportPtr mainViewport = ImGui.GetMainViewport();
         mainViewport.PlatformHandle = window.Handle;
 
@@ -86,10 +86,10 @@ public class UIManager
         SDL_SetHint("SDL_BORDERLESS_WINDOWED_STYLE", "0");
 
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
-        if(Config.Instance.Viewports)
+        if (Config.Instance.Viewports)
             io.ConfigFlags |= ImGuiConfigFlags.ViewportsEnable;
         io.ConfigInputTrickleEventQueue = false;
-        
+
         if (!File.Exists("imgui.ini") && File.Exists("imgui.ini.default"))
         {
             ImGui.LoadIniSettingsFromDisk("imgui.ini.default");
@@ -103,10 +103,10 @@ public class UIManager
             ImGui.GetIO().AddInputCharacter(c);
         };
         TextInputEXT.StartTextInput();
-        
+
         _uiRenderer = new UIRenderer(_graphicsDevice, window);
         _uiRenderer.RebuildFontAtlas();
-        
+
         AddWindow(Category.Main, new ConnectWindow());
         AddWindow(Category.Main, new ServerWindow());
         AddWindow(Category.Main, new OptionsWindow());
@@ -122,13 +122,13 @@ public class UIManager
         AddWindow(Category.Tools, new LSOWindow());
         AddWindow(Category.Tools, new ChatWindow());
         AddWindow(Category.Tools, new ServerAdminWindow());
-        
+        AddWindow(Category.Tools, new HeightMapGenerator());
         AddWindow(Category.Batch, new HeightmapWindow(gd));
 
         MinimapWindow = new MinimapWindow();
         AllWindows.Add(MinimapWindow);
         DebugWindow = new DebugWindow();
-        
+
         _MainWindowID = SDL_GetWindowID(window.Handle);
         // Use a filter to get SDL events for your extra window
         IntPtr prevUserData;
@@ -142,7 +142,7 @@ public class UIManager
             prevUserData
         );
     }
-    
+
     private unsafe bool EventFilter(IntPtr userdata, SDL_Event* evt)
     {
         var io = ImGui.GetIO();
@@ -150,84 +150,84 @@ public class UIManager
         switch (eventType)
         {
             case SDL_EventType.SDL_EVENT_MOUSE_MOTION:
-            {
-                if (GetViewportById(evt->window.windowID).NativePtr == null)
-                    return false;
-                var mouseX = evt->motion.x;
-                var mouseY = evt->motion.y;
-                if (io.ConfigFlags.HasFlag(ImGuiConfigFlags.ViewportsEnable))
                 {
-                    SDL_GetWindowPosition(SDL_GetWindowFromID(evt->window.windowID), out var windowX, out var windowY);
-                    mouseX += windowX;
-                    mouseY += windowY;
+                    if (GetViewportById(evt->window.windowID).NativePtr == null)
+                        return false;
+                    var mouseX = evt->motion.x;
+                    var mouseY = evt->motion.y;
+                    if (io.ConfigFlags.HasFlag(ImGuiConfigFlags.ViewportsEnable))
+                    {
+                        SDL_GetWindowPosition(SDL_GetWindowFromID(evt->window.windowID), out var windowX, out var windowY);
+                        mouseX += windowX;
+                        mouseY += windowY;
+                    }
+                    io.AddMousePosEvent(mouseX, mouseY);
+                    break;
                 }
-                io.AddMousePosEvent(mouseX, mouseY);
-                break;
-            }
             case SDL_EventType.SDL_EVENT_MOUSE_WHEEL:
-            {
-                if (GetViewportById(evt->window.windowID).NativePtr == null)
-                    return false;
-                float wheelX = -evt->wheel.x;
-                float wheelY = evt->wheel.y;
-                io.AddMouseWheelEvent(wheelX, wheelY);
-                break;
-            }
+                {
+                    if (GetViewportById(evt->window.windowID).NativePtr == null)
+                        return false;
+                    float wheelX = -evt->wheel.x;
+                    float wheelY = evt->wheel.y;
+                    io.AddMouseWheelEvent(wheelX, wheelY);
+                    break;
+                }
             case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN:
             case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP:
-            {
-                if (GetViewportById(evt->window.windowID).NativePtr == null)
-                    return false;
-                var mouseButton = -1;
-                if (evt->button.button == 1) { mouseButton = 0; }
-                if (evt->button.button == 3) { mouseButton = 1; }
-                if (evt->button.button == 2) { mouseButton = 2; }
-                if (evt->button.button == 4) { mouseButton = 3; }
-                if (evt->button.button == 5) { mouseButton = 4; }
-                io.AddMouseButtonEvent(mouseButton, eventType == SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN);
-                break;
-            }
-            case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_ENTER:
-            {
-                if (GetViewportById(evt->window.windowID).NativePtr == null)
-                    return false;
-                _MouseWindowId = evt->window.windowID;
-                break;
-            }
-            case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_LEAVE:
-            {
-                if (GetViewportById(evt->window.windowID).NativePtr == null)
-                    return false;
-                _MouseWindowId = 0;
-                //Should we defer leave until next frame?
-                io.AddMousePosEvent(float.MinValue, float.MinValue);
-                break;
-            }
-            
-            case SDL_EventType.SDL_EVENT_WINDOW_RESIZED:
-            {
-                // This trigger back buffer resize and can cause troubles for windows that are managed by ImGui
-                if (evt->window.windowID != _MainWindowID)
-                    return false;
-                break;
-            }
-            case SDL_EventType.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            {
-                //This event messes with Mouse.INTERNAL_WindowWidth and Mouse.INTERNAL_WindowHeight
-                //Maybe we could not filter it if FNA would start handling events that targets only main GameWindow
-                if (evt->window.windowID != _MainWindowID)
-                    return false;
-                break;
-            }
-            case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-            {
-                if (evt->window.windowID == _MainWindowID)
                 {
-                    CEDGame.Exit();
-                    return false;
+                    if (GetViewportById(evt->window.windowID).NativePtr == null)
+                        return false;
+                    var mouseButton = -1;
+                    if (evt->button.button == 1) { mouseButton = 0; }
+                    if (evt->button.button == 3) { mouseButton = 1; }
+                    if (evt->button.button == 2) { mouseButton = 2; }
+                    if (evt->button.button == 4) { mouseButton = 3; }
+                    if (evt->button.button == 5) { mouseButton = 4; }
+                    io.AddMouseButtonEvent(mouseButton, eventType == SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN);
+                    break;
                 }
-                break;
-            }
+            case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_ENTER:
+                {
+                    if (GetViewportById(evt->window.windowID).NativePtr == null)
+                        return false;
+                    _MouseWindowId = evt->window.windowID;
+                    break;
+                }
+            case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_LEAVE:
+                {
+                    if (GetViewportById(evt->window.windowID).NativePtr == null)
+                        return false;
+                    _MouseWindowId = 0;
+                    //Should we defer leave until next frame?
+                    io.AddMousePosEvent(float.MinValue, float.MinValue);
+                    break;
+                }
+
+            case SDL_EventType.SDL_EVENT_WINDOW_RESIZED:
+                {
+                    // This trigger back buffer resize and can cause troubles for windows that are managed by ImGui
+                    if (evt->window.windowID != _MainWindowID)
+                        return false;
+                    break;
+                }
+            case SDL_EventType.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+                {
+                    //This event messes with Mouse.INTERNAL_WindowWidth and Mouse.INTERNAL_WindowHeight
+                    //Maybe we could not filter it if FNA would start handling events that targets only main GameWindow
+                    if (evt->window.windowID != _MainWindowID)
+                        return false;
+                    break;
+                }
+            case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                {
+                    if (evt->window.windowID == _MainWindowID)
+                    {
+                        CEDGame.Exit();
+                        return false;
+                    }
+                    break;
+                }
         }
         if (_PrevEventFilter != null)
         {
@@ -246,21 +246,21 @@ public class UIManager
         AllWindows.Add(window);
         switch (category)
         {
-            case Category.Main: 
+            case Category.Main:
                 MainWindows.Add(window);
                 break;
             case Category.Tools:
                 ToolsWindows.Add(window);
                 break;
             case Category.Batch:
-                BatchWindows.Add(window); 
+                BatchWindows.Add(window);
                 break;
         }
     }
-    
+
     public bool CapturingMouse => ImGui.GetIO().WantCaptureMouse;
     public bool CapturingKeyboard => ImGui.GetIO().WantCaptureKeyboard;
-    
+
     private bool openContextMenu;
 
     private bool TryMapKeys(Keys key, out ImGuiKey imguikey)
@@ -357,12 +357,12 @@ public class UIManager
         if (_HasCaptureAndGlobalMouse)
         {
             var want_capture = false;
-            for(var button = 0; button < (int)ImGuiMouseButton.COUNT && !want_capture; button++)
-                if(ImGui.IsMouseDragging((ImGuiMouseButton)button, 1.0f))
+            for (var button = 0; button < (int)ImGuiMouseButton.COUNT && !want_capture; button++)
+                if (ImGui.IsMouseDragging((ImGuiMouseButton)button, 1.0f))
                     want_capture = true;
             SDL_CaptureMouse(want_capture);
         }
-        
+
         SDL_GetGlobalMouseState(out var mouseX, out var mouseY);
         if (!io.ConfigFlags.HasFlag(ImGuiConfigFlags.ViewportsEnable))
         {
@@ -379,7 +379,7 @@ public class UIManager
                 mouseViewportId = mouseViewport.ID;
             io.AddMouseViewportEvent(mouseViewportId);
         }
-        
+
         if (isActive)
         {
             //Maybe we can someday handle keyboard events from SDL, as we handle mouse input
@@ -430,7 +430,7 @@ public class UIManager
         if (CEDGame.Closing)
             return;
         ServerStatePopup();
-        
+
         if (_resetLayout)
         {
             ImGui.LoadIniSettingsFromDisk("imgui.ini.default");
@@ -457,12 +457,12 @@ public class UIManager
         //Copy of DockSpaceOverViewport with reduced host window size
         var vp = ImGui.GetMainViewport();
         ImGui.SetNextWindowPos(vp.WorkPos);
-        ImGui.SetNextWindowSize(vp.WorkSize with {Y = vp.WorkSize.Y - statusBarHeight});
+        ImGui.SetNextWindowSize(vp.WorkSize with { Y = vp.WorkSize.Y - statusBarHeight });
         ImGui.SetNextWindowViewport(vp.ID);
         var hostFlags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize |
                         ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoBringToFrontOnFocus |
                         ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoBackground;
-        
+
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(0, 0));
@@ -549,7 +549,7 @@ public class UIManager
                 ImGui.MenuItem("Walkable Surfaces", "Ctrl + W", ref CEDGame.MapManager.WalkableSurfaces);
                 if (ImGui.BeginMenu("Flat View"))
                 {
-                    if (ImGui.MenuItem("Enabled", "Ctrl + F", ref CEDGame.MapManager.FlatView));
+                    if (ImGui.MenuItem("Enabled", "Ctrl + F", ref CEDGame.MapManager.FlatView)) ;
                     {
                         CEDGame.MapManager.UpdateAllTiles();
                     }
@@ -610,11 +610,11 @@ public class UIManager
         var flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoNav | ImGuiWindowFlags.NoInputs;
         var open = true;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, new Vector2(20, statusBarHeight));
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(6,4));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(6, 4));
         ImGui.Begin("StatusBar", ref open, flags);
         var connectWindow = CEDGame.UIManager.GetWindow<ConnectWindow>();
         ImGui.TextColored(connectWindow.InfoColor, connectWindow.Info);
-        if(CEDClient.Initialized)
+        if (CEDClient.Initialized)
         {
             ImGui.SameLine();
             ImGui.Text($"{ProfileManager.ActiveProfile.Name} ({CEDClient.AccessLevel})");
@@ -630,7 +630,7 @@ public class UIManager
             var tileStats = $"Position: <{mapManager.TilePosition.X}, {mapManager.TilePosition.Y}>, Zoom: {mapManager.Camera.Zoom:F1}";
             ImGui.SetCursorPosX(vp.WorkSize.X - ImGui.CalcTextSize(tileStats).X - ImGui.GetStyle().WindowPadding.X);
             ImGui.Text(tileStats);
-            
+
         }
         igBringWindowToDisplayFront(igGetCurrentWindow());
         ImGui.End();
@@ -800,7 +800,7 @@ public class UIManager
         value = Math.Clamp(value, v_min, v_max);
         return result;
     }
-    
+
     public T GetWindow<T>() where T : Window
     {
         return AllWindows.OfType<T>().First();
