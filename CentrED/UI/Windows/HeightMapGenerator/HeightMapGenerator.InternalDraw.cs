@@ -141,7 +141,7 @@ public partial class HeightMapGenerator
                         if (TinyFileDialogs.TryOpenFile("Select Heightmap", Environment.CurrentDirectory, new[] { "*.png" }, "PNG Files", false, out var path))
                         {
                             LoadHeightmap(path);
-                            UpdateHeightData();
+                            // UpdateHeightData();
                         }
                     }
                     if (!string.IsNullOrEmpty(heightMapPath))

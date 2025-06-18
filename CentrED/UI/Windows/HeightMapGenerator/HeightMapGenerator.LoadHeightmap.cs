@@ -33,7 +33,7 @@ public partial class HeightMapGenerator
             heightMapWidth = tex.Width;
             heightMapHeight = tex.Height;
 
-            // UpdateHeightData();
+            UpdateHeightData();
             heightMapPath = path;
         }
         catch (Exception e)
