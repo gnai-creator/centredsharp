@@ -28,6 +28,10 @@ public partial class HeightMapGenerator
         if (generationTask != null && !generationTask.IsCompleted)
             return;
 
+        // Heavy initialization runs in the background to prevent the main
+        // thread from blocking and disconnecting the client.
+        EnsureTileMap(applyTransitions);
+
         if (tileGroups.Count == 0 || heightData == null)
         {
             _statusText = "Height data or tile groups not loaded.";
@@ -41,9 +45,6 @@ public partial class HeightMapGenerator
 
         generationTask = Task.Run(async () =>
         {
-            // Heavy initialization runs in the background to prevent the main
-            // thread from blocking and disconnecting the client.
-            EnsureTileMap(applyTransitions);
 
             var total = MapSizeX * MapSizeY;
             if (total > MAX_TILES)
