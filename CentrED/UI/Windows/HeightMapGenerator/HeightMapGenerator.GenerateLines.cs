@@ -19,7 +19,7 @@ public partial class HeightMapGenerator
             return;
         }
 
-        var groupsByHeight = BuildGroupsByHeightWithNames(groups);
+        // var groupsByHeight = BuildGroupsByHeightWithNames(groups);
         var defaultCandidates = groups.Select(kv => (kv.Key, kv.Value)).ToArray();
 
         // Send rows in chunks of 8 tiles to avoid gaps between lines

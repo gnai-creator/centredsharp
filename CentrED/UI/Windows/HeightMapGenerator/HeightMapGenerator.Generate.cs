@@ -31,6 +31,7 @@ public partial class HeightMapGenerator
         if (!ValidateLoadedData())
             return;
 
+
         _statusText = string.Empty;
         cancellationSource = new CancellationTokenSource();
         var token = cancellationSource.Token;
@@ -54,7 +55,7 @@ public partial class HeightMapGenerator
             }
             finally
             {
-                Application.ClientPacketQueue.Enqueue(new ServerFlushPacket());
+                ClientPacketQueue.Enqueue(new ServerFlushPacket());
             }
 
             if (token.IsCancellationRequested)

@@ -163,10 +163,10 @@ public partial class HeightMapGenerator
         var maxAltitude = altitudes.Max();
 
         // Envia o mapa de altitude
-        Application.ClientPacketQueue.Enqueue(new LargeScaleOperationPacket([area], new LSOSetAltitude(minAltitude, maxAltitude)));
+        ClientPacketQueue.Enqueue(new LargeScaleOperationPacket([area], new LSOSetAltitude(minAltitude, maxAltitude)));
 
         // Envia o mapa de land tiles
-        Application.ClientPacketQueue.Enqueue(new LargeScaleOperationPacket([area], new LSODrawLand(ids)));
+        ClientPacketQueue.Enqueue(new LargeScaleOperationPacket([area], new LSODrawLand(ids)));
 
         // Envia statics em lotes pequenos
         foreach (var env in enviromentStatics)
@@ -198,7 +198,7 @@ public partial class HeightMapGenerator
                         return;
 
                     var chunk = areas.Skip(i).Take(25).ToArray();
-                    Application.ClientPacketQueue.Enqueue(new LargeScaleOperationPacket(chunk, new LSOAddStatics(envIds, chance, LSO.StaticsPlacement.Top, 0)));
+                    ClientPacketQueue.Enqueue(new LargeScaleOperationPacket(chunk, new LSOAddStatics(envIds, chance, LSO.StaticsPlacement.Top, 0)));
                 }
             }
         }

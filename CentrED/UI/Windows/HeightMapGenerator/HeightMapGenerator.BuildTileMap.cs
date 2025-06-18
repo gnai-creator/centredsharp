@@ -33,9 +33,7 @@ public partial class HeightMapGenerator
             _statusColor = UIManager.Green;
 
         }
-        if (heightData == null)
-            UpdateHeightData();
-        InitializeTileIdToType();
+
         BuildTileMap(applyTransitions);
 
         return true;
@@ -62,7 +60,7 @@ public partial class HeightMapGenerator
             return;
         }
 
-        var groupsByHeight = BuildGroupsByHeightWithNames(groupsDict);
+        groupsByHeight = BuildGroupsByHeightWithNames(groupsDict);
         var defaultCandidates = groupsDict.Select(kv => (kv.Key, kv.Value)).ToArray();
 
         Parallel.For(0, MapSizeY, y =>
