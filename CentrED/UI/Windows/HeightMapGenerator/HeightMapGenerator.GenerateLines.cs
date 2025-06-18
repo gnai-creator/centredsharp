@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using static CentrED.Application;
+using CentrED.Client;
 
 namespace CentrED.UI.Windows;
 
@@ -34,6 +35,6 @@ public partial class HeightMapGenerator
         }
 
         // Garante que todos os dados sejam enviados
-        CEDClient.Flush();
+        Application.ClientPacketQueue.Enqueue(new ServerFlushPacket());
     }
 }

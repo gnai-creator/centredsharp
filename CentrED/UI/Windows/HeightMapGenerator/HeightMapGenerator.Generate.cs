@@ -48,7 +48,7 @@ public partial class HeightMapGenerator
             }
             finally
             {
-                CEDClient.Flush();
+                Application.ClientPacketQueue.Enqueue(new ServerFlushPacket());
             }
 
             if (token.IsCancellationRequested)
