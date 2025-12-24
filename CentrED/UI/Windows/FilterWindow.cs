@@ -3,7 +3,6 @@ using Hexa.NET.ImGui;
 using static CentrED.Application;
 using static CentrED.LangEntry;
 using Vector2 = System.Numerics.Vector2;
-using Rectangle = System.Drawing.Rectangle;
 using CentrED.IO;
 
 
@@ -11,11 +10,10 @@ namespace CentrED.UI.Windows;
 
 public class FilterWindow : Window
 {
-
     public FilterWindow()
     {
-        CEDClient.Connected += LoadStaticFilterFromProfile;
-        CEDClient.Disconnected+= SaveStaticFilterToProfile;
+        CEDClient.Connected += OnConnected;
+        CEDClient.Disconnected += OnDisconnected;
     }
     
     public override string Name => LangManager.Get(FILTER_WINDOW) + "###Filter";
@@ -23,26 +21,33 @@ public class FilterWindow : Window
     {
         IsOpen = true
     };
-    private static readonly Vector2 StaticDimensions = new(44, 44);
-    private float _tableWidth;
-    internal int SelectedId;
 
-    private SortedSet<int> StaticFilterIds => CEDGame.MapManager.StaticFilterIds;
+    private Vector2 StaticDimensions => TilesWindow.TilesDimensions;
 
-    public static void SaveStaticFilterToProfile()
+    private SortedSet<int> ObjectIdFilter => CEDGame.MapManager.ObjectIdFilter;
+    private SortedSet<int> ObjectHueFilter => CEDGame.MapManager.ObjectHueFilter;
+
+    private TilesWindow _tilesWindow => CEDGame.UIManager.GetWindow<TilesWindow>(); 
+    private HuesWindow _huesWindow => CEDGame.UIManager.GetWindow<HuesWindow>(); 
+
+    private static void OnDisconnected()
     {
-        ProfileManager.ActiveProfile.StaticFilter = CEDGame.MapManager.StaticFilterIds.ToList();
+        ProfileManager.ActiveProfile.StaticFilter = CEDGame.MapManager.ObjectIdFilter.ToList();
         ProfileManager.SaveStaticFilter();
     }
 
-    private static void LoadStaticFilterFromProfile()
+    private static void OnConnected()
     {
-        var saved = ProfileManager.ActiveProfile.StaticFilter ?? new List<int>();
-        CEDGame.MapManager.StaticFilterIds = new SortedSet<int>(saved);
+        CEDGame.MapManager.ObjectIdFilter = new SortedSet<int>(ProfileManager.ActiveProfile.StaticFilter);
     }
 
     protected override void InternalDraw()
     {
+        if (!CEDClient.Running)
+        {
+            ImGui.Text(LangManager.Get(NOT_CONNECTED));
+            return;
+        }
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 8);
         ImGui.BeginGroup();
         if (ImGuiEx.DragInt(LangManager.Get(MAX) + " Z", ref CEDGame.MapManager.MaxZ, 1, CEDGame.MapManager.MinZ, 127))
@@ -64,30 +69,67 @@ public class FilterWindow : Window
         {
             if (ImGui.BeginTabBar("FiltersTabs"))
             {
-                if (ImGui.BeginTabItem(LangManager.Get(OBJECTS) + "###StaticsFilter"))
+                if (ImGui.BeginTabItem(LangManager.Get(OBJECTS)))
                 {
-                    ImGui.Checkbox(LangManager.Get(ENABLED), ref CEDGame.MapManager.StaticFilterEnabled);
-                    ImGui.Checkbox(LangManager.Get(REVERSED), ref CEDGame.MapManager.StaticFilterInclusive);
+                    ImGui.Checkbox(LangManager.Get(ENABLED), ref CEDGame.MapManager.ObjectIdFilterEnabled);
+                    ImGui.Checkbox(LangManager.Get(REVERSED), ref CEDGame.MapManager.ObjectIdFilterInclusive);
                     if (ImGui.Button(LangManager.Get(CLEAR)))
                     {
-                        StaticFilterIds.Clear();
+                        ObjectIdFilter.Clear();
                     }
                     if (ImGui.BeginChild("TilesTable"))
                     {
-                        if (CEDClient.Running && ImGui.BeginTable("TilesTable", 3))
+                        if (ImGui.BeginTable("TilesTable", 3))
                         {
                             var clipper = ImGui.ImGuiListClipper();
-                            ImGui.TableSetupColumn
-                                ("Id", ImGuiTableColumnFlags.WidthFixed, ImGui.CalcTextSize(0xFFFF.FormatId()).X);
+                            ImGui.TableSetupColumn("Id", ImGuiTableColumnFlags.WidthFixed, ImGui.CalcTextSize(0xFFFF.FormatId()).X);
                             ImGui.TableSetupColumn("Graphic", ImGuiTableColumnFlags.WidthFixed, StaticDimensions.X);
-                            _tableWidth = ImGui.GetContentRegionAvail().X;
-                            clipper.Begin(StaticFilterIds.Count);
+                            clipper.Begin(ObjectIdFilter.Count);
                             while (clipper.Step())
                             {
-                                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++)
+                                for (var i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                                 {
-                                    if (row < StaticFilterIds.Count)
-                                        DrawStatic(StaticFilterIds.ElementAt(row));
+                                    var tileIndex = ObjectIdFilter.ElementAt(i);
+                                    var tileInfo = _tilesWindow.GetObjectInfo(tileIndex);
+                                    _tilesWindow.DrawTileRow(i, (ushort)tileIndex, tileInfo);
+                                }
+                            }
+                            ImGui.EndTable();
+                        }
+                    }
+                    ImGui.EndChild();
+                    if (ImGuiEx.DragDropTarget(TilesWindow.OBJECT_DRAG_DROP_TYPE, out var ids))
+                    {
+                        foreach (var id in ids)
+                        {
+                            ObjectIdFilter.Add(id);
+                        }
+                    }
+                    ImGui.EndTabItem();
+                }
+                if (ImGui.BeginTabItem(LangManager.Get(HUES)))
+                {
+                    ImGui.Checkbox(LangManager.Get(ENABLED), ref CEDGame.MapManager.ObjectHueFilterEnabled);
+                    ImGui.Checkbox(LangManager.Get(REVERSED), ref CEDGame.MapManager.ObjectHueFilterInclusive);
+                    if (ImGui.Button(LangManager.Get(CLEAR)))
+                    {
+                        ObjectHueFilter.Clear();
+                    }
+                    if (ImGui.BeginChild("TilesTable"))
+                    {
+                        if (ImGui.BeginTable("TilesTable", 2))
+                        {
+                            var clipper = ImGui.ImGuiListClipper();
+                            var textSize = ImGui.CalcTextSize(0xFFFF.FormatId());
+                            var columnHeight = textSize.Y;
+                            ImGui.TableSetupColumn("Id", ImGuiTableColumnFlags.WidthFixed, textSize.X);
+                            clipper.Begin(ObjectHueFilter.Count);
+                            while (clipper.Step())
+                            {
+                                for (var rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd; rowIndex++)
+                                {
+                                    var hueIndex = ObjectHueFilter.ElementAt(rowIndex);
+                                    _huesWindow.DrawHueRow(rowIndex, (ushort)hueIndex, columnHeight);
                                 }
                             }
                             ImGui.EndTable();
@@ -95,89 +137,18 @@ public class FilterWindow : Window
                     }
                     ImGui.EndChild();
 
-                    if (ImGuiEx.DragDropTarget(TilesWindow.OBJECT_DRAG_DROP_TYPE, out var ids))
+                    if (ImGuiEx.DragDropTarget(HuesWindow.Hue_DragDrop_Target_Type, out var ids))
                     {
                         foreach (var id in ids)
                         {
-                            StaticFilterIds.Add(id);
+                            ObjectHueFilter.Add(id);
                         }
                     }
-                    ImGui.EndTabItem();
-                }
-                if (ImGui.BeginTabItem(LangManager.Get(HUES)))
-                {
-                    ImGui.Text("Not implemented :)"u8);
-                    ImGui.Text("Let me know if you want it to be!"u8);
                     ImGui.EndTabItem();
                 }
                 ImGui.EndTabBar();
             }
         }
         ImGui.EndChild();
-    }
-    
-    private void DrawStatic(int index)
-    {
-        var realIndex = index + TilesWindow.MAX_TERRAIN_INDEX;
-        ref var indexEntry = ref CEDGame.MapManager.UoFileManager.Arts.File.GetValidRefEntry(realIndex);
-        var arts = CEDGame.MapManager.Arts;
-        var spriteInfo = arts.GetArt((uint)(index + indexEntry.AnimOffset));
-        var realBounds = arts.GetRealArtBounds((uint)index);
-        var bounds = new Rectangle
-            (spriteInfo.UV.X + realBounds.X, spriteInfo.UV.Y + realBounds.Y, realBounds.Width, realBounds.Height);
-        var name = CEDGame.MapManager.UoFileManager.TileData.StaticData[index].Name;
-        ImGui.TableNextRow(ImGuiTableRowFlags.None, StaticDimensions.Y);
-        if (ImGui.TableNextColumn())
-        {
-            var startPos = ImGui.GetCursorPos();
-            var selectableSize = new Vector2(_tableWidth, StaticDimensions.Y);
-            if (ImGui.Selectable
-                (
-                    $"##tile{realIndex}",
-                    SelectedId == realIndex,
-                    ImGuiSelectableFlags.SpanAllColumns,
-                    selectableSize
-                ))
-            {
-                SelectedId = realIndex;
-            }
-            if (ImGui.BeginPopupContextItem())
-            {
-                if (ImGui.Button(LangManager.Get(REMOVE)))
-                {
-                    StaticFilterIds.Remove(index);
-                    ImGui.CloseCurrentPopup();
-                }
-                ImGui.EndPopup();
-            }
-            ImGui.SetCursorPos
-            (
-                startPos with
-                {
-                    Y = startPos.Y + (StaticDimensions.Y - ImGui.GetFontSize()) / 2
-                }
-            );
-            ImGui.Text(index.FormatId());
-        }
-
-        if (ImGui.TableNextColumn())
-        {
-            if (!CEDGame.UIManager.DrawImage(spriteInfo.Texture, bounds, StaticDimensions) && CEDGame.MapManager.DebugLogging)
-            {
-                ImGui.TextColored(ImGuiColor.Red, LangManager.Get(TEXTURE_NOT_FOUND));
-            }
-            if (ImGui.IsItemHovered() && (bounds.Width > StaticDimensions.X || bounds.Height > StaticDimensions.Y))
-            {
-                ImGui.BeginTooltip();
-                CEDGame.UIManager.DrawImage(spriteInfo.Texture, bounds);
-                ImGui.EndTooltip();
-            }
-        }
-
-        if (ImGui.TableNextColumn())
-        {
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (StaticDimensions.Y - ImGui.GetFontSize()) / 2);
-            ImGui.TextUnformatted(name);
-        }
     }
 }

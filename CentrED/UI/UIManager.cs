@@ -134,7 +134,8 @@ public class UIManager
         AddWindow(Category.Tools, new ChatWindow());
         AddWindow(Category.Tools, new HistoryWindow());
         AddWindow(Category.Tools, new ServerAdminWindow());
-        
+        AddWindow(Category.Tools, new ImageOverlayWindow());
+
         AddWindow(Category.Menu, new MinimapWindow());
         DebugWindow = new DebugWindow();
         
@@ -344,8 +345,8 @@ public class UIManager
                     }
                     if (ImGui.Button(LangManager.Get(FILTER_TILE)))
                     {
-                        if (!CEDGame.MapManager.StaticFilterIds.Add(so.Tile.Id))
-                            CEDGame.MapManager.StaticFilterIds.Remove(so.Tile.Id);
+                        if (!CEDGame.MapManager.ObjectIdFilter.Add(so.Tile.Id))
+                            CEDGame.MapManager.ObjectIdFilter.Remove(so.Tile.Id);
                         close = true;
                     }
                 }
@@ -451,7 +452,7 @@ public class UIManager
                     string tileDisplay = mapManager.Selected switch
                     {
                         LandObject land => $"Land {land.Tile.Id.FormatId()} <{land.Tile.X},{land.Tile.Y},{land.Tile.Z}>",
-                        StaticObject stat => $"Object {stat.Tile.Id.FormatId()} <{stat.Tile.X},{stat.Tile.Y},{stat.Tile.Z}> Hue:{((StaticTile)stat.Tile).Hue}",
+                        StaticObject stat => $"Object {stat.Tile.Id.FormatId()} <{stat.Tile.X},{stat.Tile.Y},{stat.Tile.Z}> Hue:{((StaticTile)stat.Tile).Hue.FormatId()}",
                         _ => mapManager.Selected.Tile?.ToString() ?? "Unknown"
                     };
                     ImGui.Text(tileDisplay);

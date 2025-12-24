@@ -132,6 +132,8 @@ public class HuesWindow : Window
     private SortedSet<ushort> _tempHueSetValues = [];
     public List<ushort> ActiveHueSetValues = [];
 
+    private int _hueSetRemoveIndex = -1;
+
     private static Dictionary<string, SortedSet<ushort>> HueSets => ProfileManager.ActiveProfile.HueSets;
     private string[] _hueSetNames = HueSets.Keys.ToArray();
 
@@ -183,7 +185,7 @@ public class HuesWindow : Window
                             {
                                 if (ImGui.Button(LangManager.Get(REMOVE)))
                                 {
-                                    RemoveFromHueSet(hueIndex);
+                                    _hueSetRemoveIndex = hueIndex;
                                     ImGui.CloseCurrentPopup();
                                 }
                                 ImGui.EndPopup();
@@ -192,6 +194,11 @@ public class HuesWindow : Window
                     }
                     _selection.End();
                     ImGui.EndTable();
+                }
+                if (_hueSetRemoveIndex != -1)
+                {
+                    RemoveFromHueSet((ushort)_hueSetRemoveIndex);
+                    _hueSetRemoveIndex = -1;
                 }
             }
             ImGui.EndChild();
@@ -250,7 +257,7 @@ public class HuesWindow : Window
         ImGui.EndChild();
     }
     
-    private void DrawHueRow(int rowIndex, ushort hueIndex, float height)
+    public void DrawHueRow(int rowIndex, ushort hueIndex, float height)
     {
         var realIndex = hueIndex - 1;
         var texRect = new Rectangle(realIndex % 16 * 32, realIndex / 16, 32, 1);

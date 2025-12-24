@@ -15,7 +15,7 @@ namespace CentrED.UI.Windows;
 
 public class TilesWindow : Window
 {
-    record struct TileInfo(int RealIndex, Texture2D? Texture, Rectangle Bounds, string Name, string Flags, uint Height)
+    public record struct TileInfo(int RealIndex, Texture2D? Texture, Rectangle Bounds, string Name, string Flags, uint Height)
     {
         public static TileInfo INVALID = new(-1, null, default, "", "", 0);
     };
@@ -56,7 +56,7 @@ public class TilesWindow : Window
     private bool _texMode; // Art/Texmap
     
     public const int MAX_TERRAIN_INDEX = ArtLoader.MAX_LAND_DATA_INDEX_COUNT;
-    private static readonly Vector2 TilesDimensions = new(44, 44);
+    public static Vector2 TilesDimensions = new(44, 44);
     public const string TERRAIN_DRAG_DROP_TYPE = "TerrainDragDrop";
     public const string OBJECT_DRAG_DROP_TYPE = "ObjectDragDrop";
 
@@ -295,7 +295,7 @@ public class TilesWindow : Window
             {
                 if (ImGui.Button(LangManager.Get(ADD_TO_FILTER)))
                 {
-                    CEDGame.MapManager.StaticFilterIds.Add(tileIndex);
+                    CEDGame.MapManager.ObjectIdFilter.Add(tileIndex);
                     ImGui.CloseCurrentPopup();
                 }
             }
@@ -355,6 +355,8 @@ public class TilesWindow : Window
     private List<ushort> _tileSetTempTerrain = [];
     private List<ushort> _tileSetTempObject = [];
     private List<ushort> TileSetTemp => ObjectMode ? _tileSetTempObject : _tileSetTempTerrain;
+
+    private int _tileSetRemoveAtIndex = -1;
     
     private Dictionary<string, List<ushort>> TileSets => ObjectMode ? 
         ProfileManager.ActiveProfile.StaticTileSets : 
@@ -428,7 +430,7 @@ public class TilesWindow : Window
                                 
                                 if (ImGui.Button(LangManager.Get(REMOVE)))
                                 {
-                                    TileSetRemoveTile(i);
+                                    _tileSetRemoveAtIndex = i;
                                     ImGui.CloseCurrentPopup();
                                 }
                                 ImGui.EndPopup();
@@ -437,6 +439,11 @@ public class TilesWindow : Window
                     }
                     Selection.End();
                     ImGui.EndTable();
+                }
+                if (_tileSetRemoveAtIndex != -1)
+                {
+                    TileSetRemoveTile(_tileSetRemoveAtIndex);
+                    _tileSetRemoveAtIndex = -1;
                 }
             }
             ImGui.EndChild();
@@ -554,7 +561,7 @@ public class TilesWindow : Window
         return new TileInfo(index, spriteInfo.Texture, spriteInfo.UV, name, flags, 0);
     }
 
-    private TileInfo GetObjectInfo(int index)
+    public TileInfo GetObjectInfo(int index)
     {
         var realIndex = index + MAX_TERRAIN_INDEX;
         if (CEDGame.MapManager.UoFileManager.Arts.File.GetValidRefEntry(realIndex).Length < 0)
@@ -600,7 +607,7 @@ public class TilesWindow : Window
         }
     }
 
-    private void DrawTileRow(int index, ushort tileId, TileInfo tileInfo)
+    public void DrawTileRow(int index, ushort tileId, TileInfo tileInfo)
     {
         ImGui.PushID(index);
         ImGui.TableNextRow(ImGuiTableRowFlags.None, TilesDimensions.Y);

@@ -99,9 +99,12 @@ public class MapManager
     public int MinZ = -128;
     public int MaxZ = 127;
 
-    public bool StaticFilterEnabled;
-    public bool StaticFilterInclusive = true;
-    public SortedSet<int> StaticFilterIds = new();
+    public SortedSet<int> ObjectIdFilter = new();
+    public bool ObjectIdFilterEnabled;
+    public bool ObjectIdFilterInclusive = true;
+    public SortedSet<int> ObjectHueFilter = new();
+    public bool ObjectHueFilterEnabled;
+    public bool ObjectHueFilterInclusive = true;
     public HashSet<LandObject> _ToRecalculate = new();
 
     public List<ushort> ValidLandIds { get; } = [];
@@ -390,6 +393,7 @@ public class MapManager
 
     public StaticsManager StaticsManager = new();
     public VirtualLayerObject VirtualLayer = VirtualLayerObject.Instance; //Used for drawing
+    public ImageOverlay ImageOverlay = new(); //Used for image overlay feature
 
     public void UpdateAllTiles()
     {
@@ -892,23 +896,30 @@ public class MapManager
         {
             return false;
         }
+        if (!ShowStatics)
+            return false;
+        
         var landTile = LandTiles[tile.X, tile.Y];
         if (!WithinZRange(tile.Z) || !FlatView && landTile != null && CanDrawLand(landTile) && 
             WithinZRange(landTile.Tile.Z) && landTile.AverageZ() >= tile.PriorityZ + 5)
             return false;
+
+        var show = so.Visible;
         
-        if (!ShowStatics)
-            return false;
-        
-        if(StaticFilterEnabled)
+        if(show && ObjectIdFilterEnabled)
         {
-            return !(StaticFilterInclusive ^ StaticFilterIds.Contains(id));
+            show &= !(ObjectIdFilterInclusive ^ ObjectIdFilter.Contains(id));
         }
-        return so.Visible;
+        if(show && ObjectHueFilterEnabled)
+        {
+            show &= !(ObjectHueFilterInclusive ^ ObjectHueFilter.Contains(tile.Hue));
+        }
+        return show;
     }
 
     private static Vector4 NonWalkableHue = HuesManager.Instance.GetRGBVector(Color.FromArgb(50, 0, 0));
     private static Vector4 WalkableHue = HuesManager.Instance.GetRGBVector(Color.FromArgb(0, 50, 0));
+    public Vector4 GhostLandTilesHue = Vector4.Zero;
     
     public bool IsWalkable(LandObject lo)
     {
@@ -1013,6 +1024,7 @@ public class MapManager
             return;
         
         _mapRenderer.SetRenderTarget(null);
+        Metrics.Measure("DrawImageOverlayBelow", () => DrawImageOverlay(false));
         Metrics.Measure("DrawLand", () => DrawLand(Camera, ViewRange));
         Metrics.Start("DrawLandGrid");
         if (ShowGrid)
@@ -1022,6 +1034,7 @@ public class MapManager
         Metrics.Stop("DrawLandGrid");
         Metrics.Measure("DrawLandHeight", DrawLandHeight);
         Metrics.Measure("DrawStatics", () => DrawStatics(Camera, ViewRange));
+        Metrics.Measure("DrawImageOverlayAbove", () => DrawImageOverlay(true));
         Metrics.Measure("ApplyLights", ApplyLights);
         Metrics.Measure("DrawVirtualLayer", DrawVirtualLayer);
         Metrics.Stop("DrawMap");    
@@ -1155,7 +1168,7 @@ public class MapManager
         
         foreach (var tile in GhostLandTiles.Values)
         {
-            DrawLand(tile);
+            DrawLand(tile, GhostLandTilesHue);
         }
         _mapRenderer.End();
     }
@@ -1269,6 +1282,30 @@ public class MapManager
         );
         VirtualLayer.Z = (sbyte)VirtualLayerZ;
         _mapRenderer.DrawMapObject(VirtualLayer, Vector4.Zero);
+        _mapRenderer.End();
+    }
+
+    public void DrawImageOverlay(bool aboveTerrain)
+    {
+        if (!ImageOverlay.Enabled || ImageOverlay.Texture == null)
+        {
+            return;
+        }
+        if (ImageOverlay.DrawAboveTerrain != aboveTerrain)
+        {
+            return;
+        }
+        MapEffect.WorldViewProj = Camera.FnaWorldViewProj;
+        MapEffect.CurrentTechnique = MapEffect.Techniques["ImageOverlay"];
+        _mapRenderer.Begin
+        (
+            MapEffect,
+            RasterizerState.CullNone,
+            SamplerState.LinearClamp,
+            DepthStencilState.None,
+            BlendState.AlphaBlend
+        );
+        _mapRenderer.DrawMapObject(ImageOverlay, Vector4.Zero);
         _mapRenderer.End();
     }
 
